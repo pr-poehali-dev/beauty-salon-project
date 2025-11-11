@@ -244,7 +244,7 @@ const Index = () => {
             </div>
             <div className="h-[400px] bg-gray-200 rounded-lg overflow-hidden">
               <iframe
-                src="https://yandex.ru/map-widget/v1/?ll=30.281612%2C59.996175&z=17&l=map&pt=30.281612,59.996175,pm2rdm"
+                src="https://yandex.ru/map-widget/v1/?ll=30.281878%2C59.997463&z=17&l=map&pt=30.281878,59.997463,pm2rdm"
                 width="100%"
                 height="100%"
                 frameBorder="0"
