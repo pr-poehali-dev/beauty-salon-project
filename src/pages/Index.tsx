@@ -81,7 +81,7 @@ const Index = () => {
       <nav className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm z-50 border-b border-gray-200">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-20">
-            <h1 className="text-3xl font-bold tracking-wide">BEAUTÉ</h1>
+            <h1 className="text-3xl font-bold tracking-wide">ProMissLab</h1>
             <div className="hidden md:flex gap-8">
               {["Главная", "Услуги", "Прайс", "Контакты", "Запись"].map((item) => (
                 <button
@@ -324,7 +324,7 @@ const Index = () => {
 
       <footer className="bg-black text-white py-12 px-4">
         <div className="container mx-auto text-center">
-          <h3 className="text-3xl font-light mb-4">BEAUTÉ</h3>
+          <h3 className="text-3xl font-light mb-4">ProMissLab</h3>
           <p className="text-gray-400 mb-6">Премиум салон красоты в Санкт-Петербурге</p>
           <div className="flex justify-center gap-6 mb-6">
             <a href="#" className="hover:text-accent transition-colors">
@@ -337,7 +337,7 @@ const Index = () => {
               <Icon name="Phone" size={24} />
             </a>
           </div>
-          <p className="text-sm text-gray-500">© 2024 BEAUTÉ. Все права защищены</p>
+          <p className="text-sm text-gray-500">© 2024 ProMissLab. Все права защищены</p>
         </div>
       </footer>
     </div>
