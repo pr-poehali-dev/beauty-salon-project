@@ -203,8 +203,8 @@ const Index = () => {
         <div className="container mx-auto">
           <div className="grid md:grid-cols-3 gap-12 text-center">
             <div>
-              <div className="text-5xl font-light text-accent mb-4">5+</div>
-              <p className="text-lg">Лет на рынке</p>
+              <div className="text-5xl font-light text-accent mb-4">100%</div>
+              <p className="text-lg">Качество услуг</p>
             </div>
             <div>
               <div className="text-5xl font-light text-accent mb-4">2000+</div>
