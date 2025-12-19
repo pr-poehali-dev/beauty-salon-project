@@ -135,10 +135,15 @@ const Index = () => {
                 Профессиональные услуги красоты в элегантной атмосфере. 
                 Более 20 видов услуг для вашего совершенства.
               </p>
-              <div className="flex items-center gap-2 text-muted-foreground mb-8">
+              <a 
+                href="https://yandex.ru/maps/?text=Санкт-Петербург, ул. Авиаконструкторов, 8Б" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-muted-foreground hover:text-accent transition-colors mb-8 w-fit"
+              >
                 <Icon name="MapPin" size={20} className="text-accent" />
                 <span>Санкт-Петербург, ул. Авиаконструкторов, 8Б</span>
-              </div>
+              </a>
               <Button 
                 size="lg" 
                 className="bg-accent hover:bg-accent/90 text-black font-medium tracking-wider"
