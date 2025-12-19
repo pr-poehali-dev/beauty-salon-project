@@ -127,7 +127,7 @@ const Index = () => {
         <div className="container mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="animate-fade-in">
-              <p className="text-accent text-sm tracking-widest mb-4">ПРЕМИУМ САЛОН КРАСОТЫ</p>
+              <p className="text-accent text-sm tracking-widest mb-4">САЛОН КРАСОТЫ</p>
               <h2 className="text-6xl md:text-7xl font-light mb-6 leading-tight">
                 Ваша красота —<br />наше искусство
               </h2>
