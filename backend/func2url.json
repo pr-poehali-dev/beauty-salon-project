@@ -1,3 +1,4 @@
 {
+  "get-bookings": "https://functions.poehali.dev/e7cf85f5-775b-41b8-a953-d09953b8825c",
   "submit-booking": "https://functions.poehali.dev/95d6978c-d8af-48b9-ae8d-2cf9128af5bf"
 }
