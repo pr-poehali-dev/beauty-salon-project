@@ -173,11 +173,11 @@ const Index = () => {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               { icon: "Sparkles", title: "Ногтевой сервис", desc: "Маникюр, педикюр, наращивание" },
-              { icon: "Eye", title: "Брови и ресницы", desc: "Ламинирование, окрашивание, наращивание" },
-              { icon: "Brush", title: "Перманентный макияж", desc: "Татуаж бровей, губ, век" },
-              { icon: "Scissors", title: "Депиляция", desc: "Все виды эпиляции" },
+              { icon: "Waves", title: "Массаж и коррекция", desc: "LPG, лимфодренаж, прессотерапия" },
               { icon: "Heart", title: "Уход за лицом", desc: "Чистка, биоревитализация, уходы" },
-              { icon: "Waves", title: "Массаж и коррекция", desc: "LPG, лимфодренаж, прессотерапия" }
+              { icon: "Scissors", title: "Депиляция", desc: "Все виды эпиляции" },
+              { icon: "Brush", title: "Перманентный макияж", desc: "Татуаж бровей, губ, век" },
+              { icon: "Eye", title: "Брови и ресницы", desc: "Ламинирование, окрашивание, наращивание" }
             ].map((service, idx) => (
               <Card 
                 key={idx} 
