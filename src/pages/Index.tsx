@@ -170,7 +170,11 @@ const Index = () => {
               { icon: "Heart", title: "Уход за лицом", desc: "Чистка, биоревитализация, уходы" },
               { icon: "Waves", title: "Массаж и коррекция", desc: "LPG, лимфодренаж, прессотерапия" }
             ].map((service, idx) => (
-              <Card key={idx} className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 group">
+              <Card 
+                key={idx} 
+                className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 group cursor-pointer"
+                onClick={() => scrollToSection("прайс")}
+              >
                 <CardContent className="p-8 text-center">
                   <div className="w-16 h-16 mx-auto mb-6 bg-accent/10 rounded-full flex items-center justify-center group-hover:bg-accent/20 transition-colors">
                     <Icon name={service.icon} size={28} className="text-accent" />
