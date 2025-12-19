@@ -258,7 +258,11 @@ const Index = () => {
                 </div>
                 <div>
                   <h3 className="text-xl font-light mb-2">Телефон</h3>
-                  <p className="text-muted-foreground">+7 (812) 123-45-67</p>
+                  <p className="text-muted-foreground">
+                    <a href="tel:+79992221192" className="hover:text-accent transition-colors">+7 (999) 222-11-92</a>
+                    <br />
+                    <a href="tel:+79322555126" className="hover:text-accent transition-colors">+7 (932) 255-51-26</a>
+                  </p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
@@ -267,7 +271,7 @@ const Index = () => {
                 </div>
                 <div>
                   <h3 className="text-xl font-light mb-2">Режим работы</h3>
-                  <p className="text-muted-foreground">Ежедневно с 9:00 до 21:00</p>
+                  <p className="text-muted-foreground">Ежедневно с 8:00 до 22:00</p>
                 </div>
               </div>
             </div>
