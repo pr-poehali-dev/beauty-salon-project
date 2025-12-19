@@ -1,0 +1,20 @@
+{
+  "tests": [
+    {
+      "name": "Отправка заявки",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "name": "Мария Иванова",
+        "phone": "+7 (999) 123-45-67",
+        "service": "Стрижка и укладка",
+        "message": "Хочу записаться на завтра"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
