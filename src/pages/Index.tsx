@@ -131,10 +131,14 @@ const Index = () => {
               <h2 className="text-6xl md:text-7xl font-light mb-6 leading-tight">
                 Ваша красота —<br />наше искусство
               </h2>
-              <p className="text-muted-foreground text-lg mb-8 leading-relaxed">
+              <p className="text-muted-foreground text-lg mb-4 leading-relaxed">
                 Профессиональные услуги красоты в элегантной атмосфере. 
                 Более 20 видов услуг для вашего совершенства.
               </p>
+              <div className="flex items-center gap-2 text-muted-foreground mb-8">
+                <Icon name="MapPin" size={20} className="text-accent" />
+                <span>Санкт-Петербург, ул. Авиаконструкторов, 8Б</span>
+              </div>
               <Button 
                 size="lg" 
                 className="bg-accent hover:bg-accent/90 text-black font-medium tracking-wider"
