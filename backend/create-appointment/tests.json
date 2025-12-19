@@ -1,0 +1,23 @@
+{
+  "tests": [
+    {
+      "name": "Создание записи",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "master": "Виктория",
+        "client_name": "Мария Иванова",
+        "client_phone": "+7 (999) 123-45-67",
+        "service": "Маникюр с покрытием",
+        "appointment_date": "2025-12-25",
+        "appointment_time": "14:00",
+        "message": "Первый раз у вас"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

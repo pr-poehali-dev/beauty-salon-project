@@ -1,4 +1,6 @@
 {
+  "get-available-slots": "https://functions.poehali.dev/262766be-b5ad-4f71-802f-b7453519890f",
+  "create-appointment": "https://functions.poehali.dev/84a78be2-981d-4e9e-bf2a-9d3c080f94bc",
   "get-bookings": "https://functions.poehali.dev/e7cf85f5-775b-41b8-a953-d09953b8825c",
   "submit-booking": "https://functions.poehali.dev/95d6978c-d8af-48b9-ae8d-2cf9128af5bf"
 }

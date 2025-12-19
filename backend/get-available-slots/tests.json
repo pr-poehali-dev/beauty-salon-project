@@ -1,0 +1,14 @@
+{
+  "tests": [
+    {
+      "name": "Получение свободных слотов",
+      "method": "GET",
+      "path": "/?master=Виктория&date=2025-01-15",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
