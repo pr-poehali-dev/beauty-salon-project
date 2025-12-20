@@ -118,7 +118,7 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
 
   return (
     <>
-      <section id="услуги" className="py-20 px-4 bg-secondary/30">
+      <section id="услуги" className="py-20 px-4 bg-black">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <p className="text-accent text-sm tracking-widest mb-4">НАШИ УСЛУГИ</p>
