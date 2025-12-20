@@ -6,6 +6,12 @@ interface ServicesSectionProps {
 }
 
 const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
+  const scrollToCategory = (categoryId: string) => {
+    const element = document.getElementById(categoryId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
   const victoriaServices = [
     {
       category: "Маникюр",
@@ -120,17 +126,17 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { icon: "Sparkles", title: "Ногтевой сервис", desc: "Маникюр, педикюр, наращивание" },
-              { icon: "Waves", title: "Массаж и коррекция", desc: "LPG, лимфодренаж, прессотерапия" },
-              { icon: "Heart", title: "Уход за лицом", desc: "Чистка, биоревитализация, уходы" },
-              { icon: "Scissors", title: "Депиляция", desc: "Все виды эпиляции" },
-              { icon: "Brush", title: "Перманентный макияж", desc: "Татуаж бровей, губ, век" },
-              { icon: "Eye", title: "Брови и ресницы", desc: "Ламинирование, окрашивание, наращивание" }
+              { icon: "Sparkles", title: "Ногтевой сервис", desc: "Маникюр, педикюр, наращивание", target: "ногтевой-сервис" },
+              { icon: "Waves", title: "Массаж и коррекция", desc: "LPG, лимфодренаж, прессотерапия", target: "массаж" },
+              { icon: "Heart", title: "Уход за лицом", desc: "Чистка, биоревитализация, уходы", target: "лицо" },
+              { icon: "Scissors", title: "Депиляция", desc: "Все виды эпиляции", target: "прайс" },
+              { icon: "Brush", title: "Перманентный макияж", desc: "Татуаж бровей, губ, век", target: "прайс" },
+              { icon: "Eye", title: "Брови и ресницы", desc: "Ламинирование, окрашивание, наращивание", target: "прайс" }
             ].map((service, idx) => (
               <Card 
                 key={idx} 
                 className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 group cursor-pointer"
-                onClick={() => scrollToSection("прайс")}
+                onClick={() => scrollToCategory(service.target)}
               >
                 <CardContent className="p-8 text-center">
                   <div className="w-16 h-16 mx-auto mb-6 bg-accent/10 rounded-full flex items-center justify-center group-hover:bg-accent/20 transition-colors">
@@ -152,7 +158,7 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
             <h2 className="text-5xl font-light mb-4">Стоимость услуг</h2>
           </div>
 
-          <div className="mb-16">
+          <div className="mb-16" id="ногтевой-сервис">
             <h3 className="text-4xl font-light text-center mb-8 pb-4 border-b-2 border-accent/30 max-w-4xl mx-auto">
               Виктория — Ногтевой сервис
             </h3>
@@ -177,13 +183,17 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
             </div>
           </div>
 
-          <div>
+          <div id="массаж">
             <h3 className="text-4xl font-light text-center mb-8 pb-4 border-b-2 border-accent/30 max-w-4xl mx-auto">
               Алёна — Массаж и уход за лицом
             </h3>
             <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
               {alenaServices.map((category, idx) => (
-                <Card key={idx} className="border border-gray-200 shadow-md">
+                <Card 
+                  key={idx} 
+                  className="border border-gray-200 shadow-md"
+                  id={category.category === "Массаж ручной лица" || category.category === "Чистка лица" || category.category === "Кислотные пилинги" || category.category === "Уходовые процедуры по лицу" ? "лицо" : undefined}
+                >
                   <CardContent className="p-8">
                     <h4 className="text-2xl font-light mb-6 pb-4 border-b border-accent/30">
                       {category.category}
