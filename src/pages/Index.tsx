@@ -13,7 +13,14 @@ const Index = () => {
       <nav className="fixed top-0 left-0 right-0 bg-black/95 backdrop-blur-sm z-50 border-b border-gray-800">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-20">
-            <h1 className="text-3xl font-bold tracking-wide text-white">ProMissLab</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold tracking-wide text-white">ProMissLab</h1>
+              <img 
+                src="https://cdn.poehali.dev/files/photo_2025-12-05_11-33-48.jpg" 
+                alt="ProMissLab Logo" 
+                className="h-12 w-auto"
+              />
+            </div>
             <div className="hidden md:flex gap-8">
               {["Главная", "Услуги", "Прайс", "Контакты", "Запись"].map((item) => (
                 <button
