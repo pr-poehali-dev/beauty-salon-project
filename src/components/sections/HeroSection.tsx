@@ -12,7 +12,7 @@ const HeroSection = ({ scrollToSection }: HeroSectionProps) => {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="animate-fade-in">
             <img 
-              src="https://cdn.poehali.dev/files/Comp 1 (0;00;00;07).png" 
+              src="https://cdn.poehali.dev/files/Comp 1 (0;00;00;07)2.png" 
               alt="ProMissLab Logo" 
               className="w-64 mb-6"
             />
