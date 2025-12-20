@@ -11,6 +11,11 @@ const HeroSection = ({ scrollToSection }: HeroSectionProps) => {
       <div className="container mx-auto">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="animate-fade-in">
+            <img 
+              src="https://cdn.poehali.dev/files/Comp 1 (0;00;00;07).png" 
+              alt="ProMissLab Logo" 
+              className="w-64 mb-6"
+            />
             <p className="text-accent text-sm tracking-widest mb-4">САЛОН КРАСОТЫ</p>
             <h2 className="text-6xl md:text-7xl font-bold mb-6 leading-tight text-black">
               Ваша красота —<br />наше искусство
