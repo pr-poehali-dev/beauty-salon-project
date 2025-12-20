@@ -6,7 +6,7 @@ interface ServicesSectionProps {
 }
 
 const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
-  const services = [
+  const victoriaServices = [
     {
       category: "Маникюр",
       items: [
@@ -51,6 +51,65 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
     }
   ];
 
+  const alenaServices = [
+    {
+      category: "LPG массаж",
+      items: [
+        { name: "30 минут", price: "1400 ₽" },
+        { name: "40 минут", price: "1800 ₽" },
+        { name: "60 минут", price: "2500 ₽" }
+      ]
+    },
+    {
+      category: "Ручной массаж тела",
+      items: [
+        { name: "Шейноворотниковый 30 минут", price: "2200 ₽" },
+        { name: "Шейноворотниковый 45 минут", price: "2600 ₽" },
+        { name: "Расслабляющий 1 час", price: "3200 ₽" },
+        { name: "Расслабляющий 1,5 часа", price: "4200 ₽" },
+        { name: "Антицеллюлитный 1 час", price: "3500 ₽" },
+        { name: "Антицеллюлитный 75 минут", price: "4000 ₽" }
+      ]
+    },
+    {
+      category: "Вибро массаж",
+      items: [
+        { name: "20 минут", price: "1200 ₽" },
+        { name: "30 минут", price: "1500 ₽" },
+        { name: "40 минут", price: "1800 ₽" }
+      ]
+    },
+    {
+      category: "Массаж ручной лица",
+      items: [
+        { name: "30 минут", price: "1900 ₽" },
+        { name: "45 минут", price: "2400 ₽" },
+        { name: "60 минут", price: "2900 ₽" }
+      ]
+    },
+    {
+      category: "Чистка лица",
+      items: [
+        { name: "УЗ чистка", price: "1800 ₽" },
+        { name: "Комбинированная", price: "от 2500 ₽" }
+      ]
+    },
+    {
+      category: "Кислотные пилинги",
+      items: [
+        { name: "Высокомолекулярные", price: "от 1800 ₽" },
+        { name: "Серединные", price: "от 2500 ₽" },
+        { name: "PRX 33", price: "от 4000 ₽" }
+      ]
+    },
+    {
+      category: "Уходовые процедуры по лицу",
+      items: [
+        { name: "Уходовые процедуры", price: "от 1500 ₽" }
+      ]
+    }
+  ];
+
   return (
     <>
       <section id="услуги" className="py-20 px-4 bg-secondary/30">
@@ -90,26 +149,57 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <p className="text-accent text-sm tracking-widest mb-4">ПРАЙС-ЛИСТ</p>
-            <h2 className="text-5xl font-light">Стоимость услуг</h2>
+            <h2 className="text-5xl font-light mb-4">Стоимость услуг</h2>
           </div>
-          <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-            {services.map((category, idx) => (
-              <Card key={idx} className="border border-gray-200 shadow-md">
-                <CardContent className="p-8">
-                  <h3 className="text-2xl font-light mb-6 pb-4 border-b border-accent/30">
-                    {category.category}
-                  </h3>
-                  <div className="space-y-4">
-                    {category.items.map((item, itemIdx) => (
-                      <div key={itemIdx} className="flex justify-between items-start gap-4">
-                        <span className="text-foreground">{item.name}</span>
-                        <span className="text-accent font-medium whitespace-nowrap">{item.price}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+
+          <div className="mb-16">
+            <h3 className="text-4xl font-light text-center mb-8 pb-4 border-b-2 border-accent/30 max-w-4xl mx-auto">
+              Виктория — Ногтевой сервис
+            </h3>
+            <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+              {victoriaServices.map((category, idx) => (
+                <Card key={idx} className="border border-gray-200 shadow-md">
+                  <CardContent className="p-8">
+                    <h4 className="text-2xl font-light mb-6 pb-4 border-b border-accent/30">
+                      {category.category}
+                    </h4>
+                    <div className="space-y-4">
+                      {category.items.map((item, itemIdx) => (
+                        <div key={itemIdx} className="flex justify-between items-start gap-4">
+                          <span className="text-foreground">{item.name}</span>
+                          <span className="text-accent font-medium whitespace-nowrap">{item.price}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-4xl font-light text-center mb-8 pb-4 border-b-2 border-accent/30 max-w-4xl mx-auto">
+              Алёна — Массаж и уход за лицом
+            </h3>
+            <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+              {alenaServices.map((category, idx) => (
+                <Card key={idx} className="border border-gray-200 shadow-md">
+                  <CardContent className="p-8">
+                    <h4 className="text-2xl font-light mb-6 pb-4 border-b border-accent/30">
+                      {category.category}
+                    </h4>
+                    <div className="space-y-4">
+                      {category.items.map((item, itemIdx) => (
+                        <div key={itemIdx} className="flex justify-between items-start gap-4">
+                          <span className="text-foreground">{item.name}</span>
+                          <span className="text-accent font-medium whitespace-nowrap">{item.price}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         </div>
       </section>
