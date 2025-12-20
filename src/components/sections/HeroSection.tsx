@@ -14,7 +14,7 @@ const HeroSection = ({ scrollToSection }: HeroSectionProps) => {
             <img 
               src="https://cdn.poehali.dev/files/Comp 1 (0;00;00;07)2.png" 
               alt="ProMissLab Logo" 
-              className="w-64 mb-6"
+              className="w-96 mb-6"
             />
             <p className="text-accent text-sm tracking-widest mb-4">САЛОН КРАСОТЫ</p>
             <h2 className="text-6xl md:text-7xl font-bold mb-6 leading-tight text-black">
