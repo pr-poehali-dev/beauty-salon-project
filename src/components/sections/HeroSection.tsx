@@ -12,7 +12,7 @@ const HeroSection = ({ scrollToSection }: HeroSectionProps) => {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="animate-fade-in">
             <p className="text-accent text-sm tracking-widest mb-4">САЛОН КРАСОТЫ</p>
-            <h2 className="text-6xl md:text-7xl font-light mb-6 leading-tight">
+            <h2 className="text-6xl md:text-7xl font-bold mb-6 leading-tight">
               Ваша красота —<br />наше искусство
             </h2>
             <p className="text-muted-foreground text-lg mb-4 leading-relaxed">
