@@ -12,10 +12,10 @@ const HeroSection = ({ scrollToSection }: HeroSectionProps) => {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="animate-fade-in">
             <p className="text-accent text-sm tracking-widest mb-4">САЛОН КРАСОТЫ</p>
-            <h2 className="text-6xl md:text-7xl font-bold mb-6 leading-tight">
+            <h2 className="text-6xl md:text-7xl font-bold mb-6 leading-tight text-black">
               Ваша красота —<br />наше искусство
             </h2>
-            <p className="text-muted-foreground text-lg mb-4 leading-relaxed">
+            <p className="text-black text-lg mb-4 leading-relaxed">
               Профессиональные услуги красоты в элегантной атмосфере. 
               Более 20 видов услуг для вашего совершенства.
             </p>
@@ -23,7 +23,7 @@ const HeroSection = ({ scrollToSection }: HeroSectionProps) => {
               href="https://yandex.ru/maps/?text=Санкт-Петербург, ул. Авиаконструкторов, 8Б" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-muted-foreground hover:text-accent transition-colors mb-8 w-fit"
+              className="flex items-center gap-2 text-black hover:text-accent transition-colors mb-8 w-fit"
             >
               <Icon name="MapPin" size={20} className="text-accent" />
               <span>Санкт-Петербург, ул. Авиаконструкторов, 8Б</span>
