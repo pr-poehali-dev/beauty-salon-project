@@ -15,13 +15,6 @@ const HeroSection = ({ scrollToSection }: HeroSectionProps) => {
             <h2 className="text-6xl md:text-7xl font-light mb-6 leading-tight">
               Ваша красота —<br />наше искусство
             </h2>
-            <div className="mb-8">
-              <img 
-                src="https://cdn.poehali.dev/files/photo_2025-12-05_11-33-48.jpg" 
-                alt="ProMissLab Logo" 
-                className="h-16 w-auto"
-              />
-            </div>
             <p className="text-muted-foreground text-lg mb-4 leading-relaxed">
               Профессиональные услуги красоты в элегантной атмосфере. 
               Более 20 видов услуг для вашего совершенства.
