@@ -164,15 +164,15 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
             </h3>
             <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
               {victoriaServices.map((category, idx) => (
-                <Card key={idx} className="border border-gray-200 shadow-md">
+                <Card key={idx} className="border border-gray-200 shadow-md bg-black">
                   <CardContent className="p-8">
-                    <h4 className="text-2xl font-light mb-6 pb-4 border-b border-accent/30 text-black">
+                    <h4 className="text-2xl font-light mb-6 pb-4 border-b border-accent/30 text-white">
                       {category.category}
                     </h4>
                     <div className="space-y-4">
                       {category.items.map((item, itemIdx) => (
                         <div key={itemIdx} className="flex justify-between items-start gap-4">
-                          <span className="text-black">{item.name}</span>
+                          <span className="text-white">{item.name}</span>
                           <span className="text-accent font-medium whitespace-nowrap">{item.price}</span>
                         </div>
                       ))}
@@ -191,17 +191,17 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
               {alenaServices.map((category, idx) => (
                 <Card 
                   key={idx} 
-                  className="border border-gray-200 shadow-md"
+                  className="border border-gray-200 shadow-md bg-black"
                   id={category.category === "Массаж ручной лица" || category.category === "Чистка лица" || category.category === "Кислотные пилинги" || category.category === "Уходовые процедуры по лицу" ? "лицо" : undefined}
                 >
                   <CardContent className="p-8">
-                    <h4 className="text-2xl font-light mb-6 pb-4 border-b border-accent/30 text-black">
+                    <h4 className="text-2xl font-light mb-6 pb-4 border-b border-accent/30 text-white">
                       {category.category}
                     </h4>
                     <div className="space-y-4">
                       {category.items.map((item, itemIdx) => (
                         <div key={itemIdx} className="flex justify-between items-start gap-4">
-                          <span className="text-black">{item.name}</span>
+                          <span className="text-white">{item.name}</span>
                           <span className="text-accent font-medium whitespace-nowrap">{item.price}</span>
                         </div>
                       ))}
