@@ -10,16 +10,16 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <nav className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm z-50 border-b border-gray-200">
+      <nav className="fixed top-0 left-0 right-0 bg-black/95 backdrop-blur-sm z-50 border-b border-gray-800">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-20">
-            <h1 className="text-3xl font-bold tracking-wide">ProMissLab</h1>
+            <h1 className="text-3xl font-bold tracking-wide text-white">ProMissLab</h1>
             <div className="hidden md:flex gap-8">
               {["Главная", "Услуги", "Прайс", "Контакты", "Запись"].map((item) => (
                 <button
                   key={item}
                   onClick={() => scrollToSection(item.toLowerCase())}
-                  className="text-sm tracking-wider hover:text-accent transition-colors relative group"
+                  className="text-sm tracking-wider text-white hover:text-accent transition-colors relative group"
                 >
                   {item.toUpperCase()}
                   <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-accent group-hover:w-full transition-all duration-300"></span>
