@@ -159,7 +159,7 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
           </div>
 
           <div className="mb-16" id="ногтевой-сервис">
-            <h3 className="text-4xl font-light text-center mb-8 pb-4 border-b-2 border-accent/30 max-w-4xl mx-auto text-black">
+            <h3 className="text-4xl font-bold text-center mb-8 pb-4 border-b-2 border-accent/30 max-w-4xl mx-auto text-black">
               Виктория — Ногтевой сервис
             </h3>
             <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
@@ -184,7 +184,7 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
           </div>
 
           <div id="массаж">
-            <h3 className="text-4xl font-light text-center mb-8 pb-4 border-b-2 border-accent/30 max-w-4xl mx-auto text-black">
+            <h3 className="text-4xl font-bold text-center mb-8 pb-4 border-b-2 border-accent/30 max-w-4xl mx-auto text-black">
               Алёна — Массаж и уход за лицом
             </h3>
             <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
