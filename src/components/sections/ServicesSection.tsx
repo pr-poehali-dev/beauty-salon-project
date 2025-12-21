@@ -61,20 +61,16 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
     {
       category: "LPG массаж",
       items: [
-        { name: "30 минут", price: "1400 ₽" },
-        { name: "40 минут", price: "1800 ₽" },
-        { name: "60 минут", price: "2500 ₽" }
+        { name: "30 минут", price: "1500 ₽" },
+        { name: "40 минут", price: "1900 ₽" },
+        { name: "60 минут", price: "2750 ₽" }
       ]
     },
     {
-      category: "Ручной массаж тела",
+      category: "Ручной расслабляющий",
       items: [
-        { name: "Шейноворотниковый 30 минут", price: "2200 ₽" },
-        { name: "Шейноворотниковый 45 минут", price: "2600 ₽" },
-        { name: "Расслабляющий 1 час", price: "3200 ₽" },
-        { name: "Расслабляющий 1,5 часа", price: "4200 ₽" },
-        { name: "Антицеллюлитный 1 час", price: "3500 ₽" },
-        { name: "Антицеллюлитный 75 минут", price: "4000 ₽" }
+        { name: "1 час", price: "3300 ₽" },
+        { name: "1,5 часа", price: "4400 ₽" }
       ]
     },
     {
@@ -124,14 +120,10 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
             <p className="text-accent text-sm tracking-widest mb-4">НАШИ УСЛУГИ</p>
             <h2 className="text-5xl font-light">Спектр возможностей</h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 gap-8">
             {[
               { icon: "Sparkles", title: "Ногтевой сервис", desc: "Маникюр, педикюр, наращивание", target: "ногтевой-сервис" },
-              { icon: "Waves", title: "Массаж и коррекция", desc: "LPG, лимфодренаж, прессотерапия", target: "массаж" },
-              { icon: "Heart", title: "Уход за лицом", desc: "Чистка, биоревитализация, уходы", target: "лицо" },
-              { icon: "Scissors", title: "Депиляция", desc: "Все виды эпиляции", target: "прайс" },
-              { icon: "Brush", title: "Перманентный макияж", desc: "Татуаж бровей, губ, век", target: "прайс" },
-              { icon: "Eye", title: "Брови и ресницы", desc: "Ламинирование, окрашивание, наращивание", target: "прайс" }
+              { icon: "Waves", title: "Массаж и уход за лицом", desc: "LPG, ручной массаж, чистка лица", target: "массаж" }
             ].map((service, idx) => (
               <Card 
                 key={idx} 
