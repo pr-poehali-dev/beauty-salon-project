@@ -7,7 +7,7 @@ interface HeroSectionProps {
 
 const HeroSection = ({ scrollToSection }: HeroSectionProps) => {
   return (
-    <section id="главная" className="pt-32 pb-20 px-4">
+    <section id="главная" className="pt-32 pb-20 px-4 bg-black">
       <div className="container mx-auto">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="animate-fade-in">
@@ -17,10 +17,10 @@ const HeroSection = ({ scrollToSection }: HeroSectionProps) => {
               className="w-96 mb-6"
             />
             <p className="text-accent text-sm tracking-widest mb-4">САЛОН КРАСОТЫ</p>
-            <h2 className="text-6xl md:text-7xl font-bold mb-6 leading-tight text-black">
+            <h2 className="text-6xl md:text-7xl font-bold mb-6 leading-tight text-white">
               Ваша красота —<br />наше искусство
             </h2>
-            <p className="text-black text-lg mb-4 leading-relaxed">
+            <p className="text-white text-lg mb-4 leading-relaxed">
               Профессиональные услуги красоты в элегантной атмосфере. 
               Более 20 видов услуг для вашего совершенства.
             </p>
@@ -28,7 +28,7 @@ const HeroSection = ({ scrollToSection }: HeroSectionProps) => {
               href="https://yandex.ru/maps/?text=Санкт-Петербург, ул. Авиаконструкторов, 8Б" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-black hover:text-accent transition-colors mb-8 w-fit"
+              className="flex items-center gap-2 text-white hover:text-accent transition-colors mb-8 w-fit"
             >
               <Icon name="MapPin" size={20} className="text-accent" />
               <span>Санкт-Петербург, ул. Авиаконструкторов, 8Б</span>
