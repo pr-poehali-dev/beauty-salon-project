@@ -25,13 +25,13 @@ const HeroSection = ({ scrollToSection }: HeroSectionProps) => {
               Более 20 видов услуг для вашего совершенства.
             </p>
             <a 
-              href="https://yandex.ru/maps/?text=Санкт-Петербург, ул. Авиаконструкторов, 8Б" 
+              href="https://yandex.ru/maps/?text=Санкт-Петербург, Проспект Авиаконструкторов, 8Б" 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-white hover:text-accent transition-colors mb-8 w-fit"
             >
               <Icon name="MapPin" size={20} className="text-accent" />
-              <span>Санкт-Петербург, ул. Авиаконструкторов, 8Б</span>
+              <span>Санкт-Петербург, Проспект Авиаконструкторов, 8Б</span>
             </a>
             <Button 
               size="lg" 
