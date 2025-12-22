@@ -36,7 +36,7 @@ const ContactsSection = () => {
                 </div>
                 <div>
                   <h3 className="text-xl font-light mb-2 text-white">Адрес</h3>
-                  <p className="text-gray-300">Санкт-Петербург<br />ул. Авиаконструкторов, 8Б</p>
+                  <p className="text-gray-300">Санкт-Петербург<br />Проспект Авиаконструкторов, 8Б</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
@@ -48,7 +48,7 @@ const ContactsSection = () => {
                   <p className="text-gray-300">
                     <a href="tel:+79992221192" className="hover:text-accent transition-colors">+7 (999) 222-11-92</a>
                     <br />
-                    <a href="tel:+79322555126" className="hover:text-accent transition-colors">+7 (932) 255-51-26</a>
+                    <a href="tel:+79117819824" className="hover:text-accent transition-colors">+7 (911) 781-98-24</a>
                   </p>
                 </div>
               </div>
