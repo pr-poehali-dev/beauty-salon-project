@@ -125,14 +125,14 @@ const BookingSection = () => {
   };
 
   return (
-    <section id="запись" className="py-20 px-4 bg-white">
+    <section id="запись" className="py-20 px-4 bg-black">
       <div className="container mx-auto max-w-2xl">
         <div className="text-center mb-12">
           <p className="text-accent text-sm tracking-widest mb-4">ОНЛАЙН ЗАПИСЬ</p>
-          <h2 className="text-5xl font-light mb-4 text-black">Записаться на прием</h2>
-          <p className="text-black">Выберите мастера, услугу и удобное время</p>
+          <h2 className="text-5xl font-light mb-4 text-white">Записаться на прием</h2>
+          <p className="text-white">Выберите мастера, услугу и удобное время</p>
         </div>
-        <Card className="border-0 shadow-xl">
+        <Card className="border-0 shadow-xl bg-white">
           <CardContent className="p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
