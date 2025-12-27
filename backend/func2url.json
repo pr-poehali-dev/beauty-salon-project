@@ -1,4 +1,5 @@
 {
+  "telegram-bot": "https://functions.poehali.dev/dde30406-f16c-48a6-a6bf-94d59225390f",
   "get-available-slots": "https://functions.poehali.dev/262766be-b5ad-4f71-802f-b7453519890f",
   "create-appointment": "https://functions.poehali.dev/84a78be2-981d-4e9e-bf2a-9d3c080f94bc",
   "get-bookings": "https://functions.poehali.dev/e7cf85f5-775b-41b8-a953-d09953b8825c",
