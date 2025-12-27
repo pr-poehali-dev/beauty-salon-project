@@ -98,10 +98,16 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     try:
         telegram_bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
-        telegram_chat_id = os.environ.get('TELEGRAM_CHAT_ID')
-        telegram_chat_id_2 = os.environ.get('TELEGRAM_CHAT_ID_2')
+        telegram_chat_ids = [
+            os.environ.get('TELEGRAM_CHAT_ID'),
+            os.environ.get('TELEGRAM_CHAT_ID_2'),
+            os.environ.get('TELEGRAM_CHAT_ID_3'),
+            os.environ.get('TELEGRAM_CHAT_ID_4'),
+            os.environ.get('TELEGRAM_CHAT_ID_5')
+        ]
+        telegram_chat_ids = [chat_id for chat_id in telegram_chat_ids if chat_id]
         
-        if telegram_bot_token and (telegram_chat_id or telegram_chat_id_2):
+        if telegram_bot_token and telegram_chat_ids:
             telegram_message = f"""
 🔔 Новая заявка #{booking_id}
 
@@ -111,16 +117,10 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 💬 Сообщение: {booking.message}
             """
             
-            if telegram_chat_id:
+            for chat_id in telegram_chat_ids:
                 requests.post(
                     f'https://api.telegram.org/bot{telegram_bot_token}/sendMessage',
-                    json={'chat_id': telegram_chat_id, 'text': telegram_message}
-                )
-            
-            if telegram_chat_id_2:
-                requests.post(
-                    f'https://api.telegram.org/bot{telegram_bot_token}/sendMessage',
-                    json={'chat_id': telegram_chat_id_2, 'text': telegram_message}
+                    json={'chat_id': chat_id, 'text': telegram_message}
                 )
             
             telegram_sent = True
