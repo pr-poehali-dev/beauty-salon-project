@@ -105,7 +105,7 @@ const BookingSection = () => {
           <h2 className="text-5xl font-light mb-4 text-white">Записаться на прием</h2>
           <p className="text-white mb-6">Выберите мастера, услугу и удобное время</p>
           <a 
-            href="https://t.me/promisslab" 
+            href="https://t.me/promisslab_bot" 
             target="_blank" 
             rel="noopener noreferrer"
             className="inline-flex items-center gap-3 px-6 py-3 bg-accent text-black rounded-lg hover:bg-accent/90 transition-all font-medium text-base"
