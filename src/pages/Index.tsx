@@ -1,5 +1,6 @@
 import HeroSection from "@/components/sections/HeroSection";
 import ServicesSection from "@/components/sections/ServicesSection";
+import GallerySection from "@/components/sections/GallerySection";
 import ContactsSection from "@/components/sections/ContactsSection";
 import BookingSection from "@/components/sections/BookingSection";
 
@@ -22,7 +23,7 @@ const Index = () => {
               />
             </div>
             <div className="hidden md:flex gap-8">
-              {["Главная", "Услуги", "Прайс", "Контакты", "Запись"].map((item) => (
+              {["Главная", "Услуги", "Галерея", "Прайс", "Контакты", "Запись"].map((item) => (
                 <button
                   key={item}
                   onClick={() => scrollToSection(item.toLowerCase())}
@@ -39,6 +40,7 @@ const Index = () => {
 
       <HeroSection scrollToSection={scrollToSection} />
       <ServicesSection scrollToSection={scrollToSection} />
+      <GallerySection />
       <ContactsSection />
       <BookingSection />
 
