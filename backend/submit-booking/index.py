@@ -70,7 +70,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             msg = MIMEMultipart()
             msg['From'] = smtp_user
-            msg['To'] = 'danilakrivenko5@gmail.com'
+            msg['To'] = 'danilakrivenko5@gmail.com, danilakrivenko40@gmail.com'
             msg['Subject'] = f'Новая заявка #{booking_id} от {booking.name}'
             
             body = f"""
