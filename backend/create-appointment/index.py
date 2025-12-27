@@ -104,8 +104,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     try:
         telegram_bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
         telegram_chat_id = os.environ.get('TELEGRAM_CHAT_ID')
+        telegram_chat_id_2 = os.environ.get('TELEGRAM_CHAT_ID_2')
         
-        if telegram_bot_token and telegram_chat_id:
+        if telegram_bot_token and (telegram_chat_id or telegram_chat_id_2):
             telegram_message = f"""
 🔔 Новая запись #{appointment_id}
 
@@ -119,10 +120,18 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 💬 Сообщение: {appointment.message}
             """
             
-            requests.post(
-                f'https://api.telegram.org/bot{telegram_bot_token}/sendMessage',
-                json={'chat_id': telegram_chat_id, 'text': telegram_message}
-            )
+            if telegram_chat_id:
+                requests.post(
+                    f'https://api.telegram.org/bot{telegram_bot_token}/sendMessage',
+                    json={'chat_id': telegram_chat_id, 'text': telegram_message}
+                )
+            
+            if telegram_chat_id_2:
+                requests.post(
+                    f'https://api.telegram.org/bot{telegram_bot_token}/sendMessage',
+                    json={'chat_id': telegram_chat_id_2, 'text': telegram_message}
+                )
+            
             telegram_sent = True
     except Exception:
         pass
