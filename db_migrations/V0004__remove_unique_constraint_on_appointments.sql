@@ -1,0 +1,1 @@
+ALTER TABLE t_p5914469_beauty_salon_project.appointments DROP CONSTRAINT IF EXISTS appointments_master_appointment_date_appointment_time_key;

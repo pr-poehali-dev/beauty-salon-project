@@ -53,21 +53,6 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     cur = conn.cursor()
     
     cur.execute(
-        "SELECT id FROM t_p5914469_beauty_salon_project.appointments WHERE master = %s AND appointment_date = %s AND appointment_time = %s",
-        (appointment.master, appointment.appointment_date, appointment.appointment_time)
-    )
-    existing = cur.fetchone()
-    
-    if existing:
-        cur.close()
-        conn.close()
-        return {
-            'statusCode': 400,
-            'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Это время уже занято'})
-        }
-    
-    cur.execute(
         "INSERT INTO t_p5914469_beauty_salon_project.appointments (master, client_name, client_phone, service, appointment_date, appointment_time, message) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
         (appointment.master, appointment.client_name, appointment.client_phone, appointment.service, appointment.appointment_date, appointment.appointment_time, appointment.message)
     )

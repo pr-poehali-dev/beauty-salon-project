@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,8 +17,7 @@ const BookingSection = () => {
     appointment_time: "",
     message: ""
   });
-  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
-  const [loadingSlots, setLoadingSlots] = useState(false);
+
   const { toast } = useToast();
 
   const masterServices = {
@@ -52,32 +51,7 @@ const BookingSection = () => {
     ]
   };
 
-  useEffect(() => {
-    if (formData.master && formData.appointment_date) {
-      loadAvailableSlots();
-    }
-  }, [formData.master, formData.appointment_date]);
 
-  const loadAvailableSlots = async () => {
-    setLoadingSlots(true);
-    try {
-      const response = await fetch(
-        `https://functions.poehali.dev/262766be-b5ad-4f71-802f-b7453519890f?master=${formData.master}&date=${formData.appointment_date}`
-      );
-      const data = await response.json();
-      if (data.success) {
-        setAvailableSlots(data.available_slots);
-      }
-    } catch (error) {
-      toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить доступное время",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingSlots(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,7 +81,6 @@ const BookingSection = () => {
           description: `Вы записаны к мастеру ${formData.master} на ${formData.appointment_date} в ${formData.appointment_time}`,
         });
         setFormData({ master: "", name: "", phone: "", service: "", appointment_date: "", appointment_time: "", message: "" });
-        setAvailableSlots([]);
       } else {
         toast({
           title: "Ошибка",
@@ -189,25 +162,15 @@ const BookingSection = () => {
 
                 <div>
                   <Label htmlFor="time" className="text-sm tracking-wider">ВРЕМЯ *</Label>
-                  <Select 
-                    value={formData.appointment_time} 
-                    onValueChange={(value) => setFormData({ ...formData, appointment_time: value })}
+                  <Input
+                    id="time"
+                    type="time"
+                    value={formData.appointment_time}
+                    onChange={(e) => setFormData({ ...formData, appointment_time: e.target.value })}
                     required
-                    disabled={!formData.appointment_date || loadingSlots}
-                  >
-                    <SelectTrigger className="mt-2">
-                      <SelectValue placeholder={loadingSlots ? "Загрузка..." : "Выберите время"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableSlots.length === 0 ? (
-                        <SelectItem value="none" disabled>Нет доступного времени</SelectItem>
-                      ) : (
-                        availableSlots.map((slot) => (
-                          <SelectItem key={slot} value={slot}>{slot}</SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                    className="mt-2"
+                    disabled={!formData.appointment_date}
+                  />
                 </div>
               </div>
 
