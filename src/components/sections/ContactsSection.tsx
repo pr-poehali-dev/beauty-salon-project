@@ -46,9 +46,9 @@ const ContactsSection = () => {
                 <div>
                   <h3 className="text-xl font-light mb-2 text-white">Телефон</h3>
                   <p className="text-gray-300">
-                    <a href="tel:+79992221192" className="hover:text-accent transition-colors">+7 (999) 222-11-92</a>
+                    <a href="tel:+79992221192" className="hover:text-accent transition-colors">+7 (999) 222-11-92</a> — Виктория
                     <br />
-                    <a href="tel:+79117819824" className="hover:text-accent transition-colors">+7 (911) 781-98-24</a>
+                    <a href="tel:+79117819824" className="hover:text-accent transition-colors">+7 (911) 781-98-24</a> — Алена
                   </p>
                 </div>
               </div>
