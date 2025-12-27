@@ -6,6 +6,7 @@ from email.mime.multipart import MIMEMultipart
 from typing import Dict, Any
 import psycopg2
 from pydantic import BaseModel, Field
+import requests
 
 class BookingRequest(BaseModel):
     """Модель данных заявки на бронирование"""
@@ -60,6 +61,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     # Отправка email (если настроен SMTP)
     email_sent = False
+    telegram_sent = False
+    
     try:
         smtp_host = os.environ.get('SMTP_HOST')
         
@@ -93,6 +96,28 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     except Exception:
         pass
     
+    try:
+        telegram_bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+        telegram_chat_id = os.environ.get('TELEGRAM_CHAT_ID')
+        
+        if telegram_bot_token and telegram_chat_id:
+            telegram_message = f"""
+🔔 Новая заявка #{booking_id}
+
+👤 Имя: {booking.name}
+📞 Телефон: {booking.phone}
+💅 Услуга: {booking.service}
+💬 Сообщение: {booking.message}
+            """
+            
+            requests.post(
+                f'https://api.telegram.org/bot{telegram_bot_token}/sendMessage',
+                json={'chat_id': telegram_chat_id, 'text': telegram_message}
+            )
+            telegram_sent = True
+    except Exception:
+        pass
+    
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -101,6 +126,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'success': True,
             'booking_id': booking_id,
             'email_sent': email_sent,
+            'telegram_sent': telegram_sent,
             'message': 'Заявка успешно отправлена'
         })
     }

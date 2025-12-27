@@ -6,6 +6,7 @@ from email.mime.multipart import MIMEMultipart
 from typing import Dict, Any
 import psycopg2
 from pydantic import BaseModel, Field
+import requests
 
 class AppointmentRequest(BaseModel):
     """Модель данных записи к мастеру"""
@@ -76,6 +77,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     conn.close()
     
     email_sent = False
+    telegram_sent = False
+    
     try:
         smtp_host = os.environ.get('SMTP_HOST')
         
@@ -113,6 +116,32 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     except Exception:
         pass
     
+    try:
+        telegram_bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+        telegram_chat_id = os.environ.get('TELEGRAM_CHAT_ID')
+        
+        if telegram_bot_token and telegram_chat_id:
+            telegram_message = f"""
+🔔 Новая запись #{appointment_id}
+
+👤 Мастер: {appointment.master}
+📅 Дата: {appointment.appointment_date}
+🕐 Время: {appointment.appointment_time}
+
+👨‍💼 Клиент: {appointment.client_name}
+📞 Телефон: {appointment.client_phone}
+💅 Услуга: {appointment.service}
+💬 Сообщение: {appointment.message}
+            """
+            
+            requests.post(
+                f'https://api.telegram.org/bot{telegram_bot_token}/sendMessage',
+                json={'chat_id': telegram_chat_id, 'text': telegram_message}
+            )
+            telegram_sent = True
+    except Exception:
+        pass
+    
     return {
         'statusCode': 200,
         'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
@@ -121,6 +150,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'success': True,
             'appointment_id': appointment_id,
             'email_sent': email_sent,
+            'telegram_sent': telegram_sent,
             'message': 'Запись успешно создана'
         })
     }
