@@ -61,32 +61,104 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         elif callback_data.startswith('book_date_'):
             selected_date = callback_data.split('_')[2]
+            
+            masters = ['Виктория', 'Алена']
+            buttons = []
+            for master in masters:
+                buttons.append([{'text': f"👤 {master}", 'callback_data': f"book_master_{master}_{selected_date}"}])
+            
+            cur.close()
+            conn.close()
+            
+            keyboard = {'inline_keyboard': buttons}
+            edit_message_text_with_keyboard(bot_token, chat_id, message_id, f"📅 Выберите мастера на {datetime.strptime(selected_date, '%Y%m%d').strftime('%d.%m.%Y')}:", keyboard)
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'ok': True})
+            }
+        
+        elif callback_data.startswith('book_master_'):
+            parts = callback_data.split('_')
+            master = parts[2]
+            selected_date = parts[3]
+            
             cur.execute(
-                "SELECT master, appointment_time FROM appointments WHERE appointment_date = %s ORDER BY master, appointment_time",
-                (datetime.strptime(selected_date, '%Y%m%d').date(),)
+                "SELECT appointment_time FROM appointments WHERE appointment_date = %s AND master = %s ORDER BY appointment_time",
+                (datetime.strptime(selected_date, '%Y%m%d').date(), master)
             )
             booked = cur.fetchall()
             
-            masters = ['Виктория', 'Алена']
             work_hours = list(range(9, 19))
+            booked_times = [b[0].hour for b in booked]
+            free_times = [h for h in work_hours if h not in booked_times]
             
             buttons = []
-            for master in masters:
-                booked_times = [b[1].hour for b in booked if b[0] == master]
-                free_times = [h for h in work_hours if h not in booked_times]
-                
-                for hour in free_times[:5]:
-                    time_str = f"{hour:02d}:00"
-                    buttons.append([{'text': f"{master} - {time_str}", 'callback_data': f"book_time_{master}_{selected_date}_{hour:02d}00"}])
+            for hour in free_times:
+                time_str = f"{hour:02d}:00"
+                buttons.append([{'text': f"🕐 {time_str}", 'callback_data': f"book_time_{master}_{selected_date}_{hour:02d}00"}])
             
             cur.close()
             conn.close()
             
             if buttons:
                 keyboard = {'inline_keyboard': buttons}
-                edit_message_text_with_keyboard(bot_token, chat_id, message_id, f"📅 Выберите мастера и время на {datetime.strptime(selected_date, '%Y%m%d').strftime('%d.%m.%Y')}:", keyboard)
+                edit_message_text_with_keyboard(bot_token, chat_id, message_id, f"🕐 Выберите время у мастера {master}:", keyboard)
             else:
-                edit_message_text(bot_token, chat_id, message_id, "❌ На эту дату нет свободных окон")
+                edit_message_text(bot_token, chat_id, message_id, f"❌ У мастера {master} нет свободных окон на {datetime.strptime(selected_date, '%Y%m%d').strftime('%d.%m.%Y')}")
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'ok': True})
+            }
+        
+        elif callback_data.startswith('book_time_'):
+            parts = callback_data.split('_')
+            master = parts[2]
+            selected_date = parts[3]
+            time_str = parts[4]
+            
+            appointment_date = datetime.strptime(selected_date, '%Y%m%d').date()
+            appointment_time = datetime.strptime(time_str, '%H%M').time()
+            
+            cur.execute(
+                "SELECT COUNT(*) FROM appointments WHERE appointment_date = %s AND appointment_time = %s AND master = %s",
+                (appointment_date, appointment_time, master)
+            )
+            if cur.fetchone()[0] > 0:
+                answer_callback_query(bot_token, callback['id'], "❌ Это время уже занято")
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 200,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'ok': True})
+                }
+            
+            cur.execute(
+                "DELETE FROM appointments WHERE client_name LIKE %s AND service = 'temp'",
+                (f'temp_{chat_id}%',)
+            )
+            
+            cur.execute(
+                "INSERT INTO appointments (master, client_name, client_phone, service, appointment_date, appointment_time, message) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                (master, f'temp_{chat_id}', '', 'temp', appointment_date, appointment_time, f'pending_{chat_id}')
+            )
+            temp_apt_id = cur.fetchone()[0]
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            response_text = f"📝 Для завершения записи отправьте сообщение:\n\n"
+            response_text += f"Ваше имя | Телефон | Услуга\n\n"
+            response_text += f"Пример:\n"
+            response_text += f"Анна Смирнова | +79001234567 | Маникюр\n\n"
+            response_text += f"📅 {master}, {appointment_date.strftime('%d.%m.%Y')} в {appointment_time.strftime('%H:%M')}"
+            
+            edit_message_text(bot_token, chat_id, message_id, response_text)
+            answer_callback_query(bot_token, callback['id'], "✅ Введите данные в чат")
             
             return {
                 'statusCode': 200,
@@ -541,10 +613,64 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             response_text = f"❌ Ошибка: {str(e)}\n\nПроверьте формат данных"
     
     else:
-        if is_admin:
-            response_text = "❓ Неизвестная команда. Используйте /help для списка команд"
+        if '|' in text and not is_admin:
+            cur.execute(
+                "SELECT id, master, appointment_date, appointment_time FROM appointments WHERE message = %s AND service = 'temp'",
+                (f'pending_{chat_id}',)
+            )
+            pending = cur.fetchone()
+            
+            if pending:
+                try:
+                    parts = [p.strip() for p in text.split('|')]
+                    
+                    if len(parts) >= 3:
+                        client_name = parts[0]
+                        client_phone = parts[1]
+                        service = parts[2]
+                        
+                        apt_id = pending[0]
+                        master = pending[1]
+                        appointment_date = pending[2]
+                        appointment_time = pending[3]
+                        
+                        cur.execute(
+                            "UPDATE appointments SET client_name = %s, client_phone = %s, service = %s, message = %s WHERE id = %s",
+                            (client_name, client_phone, service, f'Запись через бот от клиента {chat_id}', apt_id)
+                        )
+                        conn.commit()
+                        
+                        response_text = f"✅ Вы успешно записаны!\n\n"
+                        response_text += f"ID записи: {apt_id}\n"
+                        response_text += f"👤 {client_name}\n"
+                        response_text += f"📞 {client_phone}\n"
+                        response_text += f"💅 {service}\n"
+                        response_text += f"👨‍💼 Мастер: {master}\n"
+                        response_text += f"📅 {appointment_date.strftime('%d.%m.%Y')} в {appointment_time.strftime('%H:%M')}\n\n"
+                        response_text += f"📋 Посмотреть записи: /myappointments"
+                        
+                        for admin_id in admin_chat_ids:
+                            notify_text = f"🔔 Новая запись через бот!\n\n"
+                            notify_text += f"👤 {client_name} ({client_phone})\n"
+                            notify_text += f"💅 {service}\n"
+                            notify_text += f"👨‍💼 Мастер: {master}\n"
+                            notify_text += f"📅 {appointment_date.strftime('%d.%m.%Y')} в {appointment_time.strftime('%H:%M')}\n"
+                            notify_text += f"ID: {apt_id}"
+                            send_telegram_message_async(bot_token, admin_id, notify_text)
+                    else:
+                        response_text = "❌ Неверный формат. Используйте:\nИмя | Телефон | Услуга"
+                except Exception as e:
+                    response_text = f"❌ Ошибка: {str(e)}\n\nИспользуйте формат: Имя | Телефон | Услуга"
+            else:
+                if is_admin:
+                    response_text = "❓ Неизвестная команда. Используйте /help для списка команд"
+                else:
+                    response_text = "❓ Неизвестная команда.\n\nДоступные команды:\n💅 Свободные окна\n📋 Мои записи\nℹ️ Помощь"
         else:
-            response_text = "❓ Неизвестная команда.\n\nДоступные команды:\n/free - Свободные окна\n/book - Записаться\n/myappointments - Мои записи\n/help - Помощь"
+            if is_admin:
+                response_text = "❓ Неизвестная команда. Используйте /help для списка команд"
+            else:
+                response_text = "❓ Неизвестная команда.\n\nДоступные команды:\n💅 Свободные окна\n📋 Мои записи\nℹ️ Помощь"
     
     cur.close()
     conn.close()
