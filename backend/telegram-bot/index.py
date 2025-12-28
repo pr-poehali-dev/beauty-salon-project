@@ -90,7 +90,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             )
             booked = cur.fetchall()
             
-            work_hours = list(range(9, 19))
+            work_hours = list(range(8, 22))
             booked_times = [b[0].hour for b in booked]
             free_times = [h for h in work_hours if h not in booked_times]
             
@@ -281,7 +281,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 Выберите действие с помощью кнопок ниже 👇"""
             keyboard = {
                 'keyboard': [
-                    [{'text': '💅 Свободные окна'}, {'text': '📝 Записаться'}],
+                    [{'text': '💅 Свободные окна'}],
                     [{'text': '📋 Мои записи'}, {'text': 'ℹ️ Помощь'}]
                 ],
                 'resize_keyboard': True,
@@ -439,9 +439,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         today = datetime.now().date()
         buttons = []
+        weekdays_ru = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
         for i in range(7):
             date = today + timedelta(days=i)
-            date_str = date.strftime('%d.%m (%a)')
+            weekday = weekdays_ru[date.weekday()]
+            date_str = date.strftime(f'%d.%m ({weekday})')
             buttons.append([{'text': date_str, 'callback_data': f"book_date_{date.strftime('%Y%m%d')}"}])
         
         keyboard = {'inline_keyboard': buttons}
@@ -461,7 +463,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             booked = cur.fetchall()
             
             masters = ['Виктория', 'Алена']
-            work_hours = list(range(9, 19))
+            work_hours = list(range(8, 22))
             
             response_text = f"💅 Свободные окна на {appointment_date.strftime('%d.%m.%Y')}:\n\n"
             
