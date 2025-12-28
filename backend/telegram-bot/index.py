@@ -343,22 +343,21 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         elif callback_data.startswith('addclient_master_'):
             master = callback_data.split('_', 2)[2]
             
+            cur.execute("SELECT message FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{chat_id}%',))
+            old_message = cur.fetchone()[0]
+            phone = old_message.replace(f'add_step3_{chat_id}', '').replace(f'add_step2_{chat_id}_phone_', '')
+            
             cur.execute(
                 "UPDATE appointments SET master = %s, message = %s WHERE client_name LIKE %s AND service = 'admin_temp'",
-                (master, f'add_step4_{chat_id}', f'admin_add_{chat_id}%')
+                (master, f'add_step4_{chat_id}_phone_{phone}', f'admin_add_{chat_id}%')
             )
             conn.commit()
-            cur.close()
-            conn.close()
             
-            cur2 = psycopg2.connect(os.environ['DATABASE_URL']).cursor()
-            cur2.execute("SELECT client_name, client_phone, appointment_date FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{chat_id}%',))
-            data = cur2.fetchone()
-            cur2.close()
+            cur.execute("SELECT client_name, appointment_date FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{chat_id}%',))
+            data = cur.fetchone()
             
             client_name = data[0].replace(f'admin_add_{chat_id}_', '')
-            client_phone = data[1]
-            date_str = data[2].strftime('%d.%m.%Y')
+            date_str = data[1].strftime('%d.%m.%Y')
             
             services = [
                 'Маникюр', 'Педикюр', 'Маникюр + Педикюр',
@@ -375,13 +374,16 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             response_text = f"📝 Добавление клиента - Шаг 5 из 6\n\n"
             response_text += f"👤 {client_name}\n"
-            response_text += f"📞 {client_phone}\n"
+            response_text += f"📞 {phone}\n"
             response_text += f"📅 {date_str}\n"
             response_text += f"👨‍💼 Мастер: {master}\n\n"
             response_text += "Выберите услугу:"
             
             edit_message_text_with_keyboard(bot_token, chat_id, message_id, response_text, keyboard)
             answer_callback_query(bot_token, callback['id'], "✅ Выберите услугу")
+            
+            cur.close()
+            conn.close()
             
             return {
                 'statusCode': 200,
@@ -454,7 +456,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             master = data[3]
             
             cur.execute("SELECT message FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{chat_id}%',))
-            phone = cur.fetchone()[0].replace(f'add_step5_{chat_id}_phone_', '').replace(f'add_step2_{chat_id}_phone_', '')
+            message_data = cur.fetchone()[0]
+            phone = message_data.replace(f'add_step5_{chat_id}_phone_', '').replace(f'add_step4_{chat_id}_phone_', '').replace(f'add_step2_{chat_id}_phone_', '')
             
             cur.execute(
                 "DELETE FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'",
