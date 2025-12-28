@@ -33,6 +33,67 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     update = json.loads(event.get('body', '{}'))
     
+    if 'callback_query' in update:
+        callback = update['callback_query']
+        chat_id = callback['message']['chat']['id']
+        callback_data = callback.get('data', '')
+        message_id = callback['message']['message_id']
+        
+        bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        cur = conn.cursor()
+        
+        if callback_data.startswith('cancel_'):
+            apt_id = int(callback_data.split('_')[1])
+            cur.execute("DELETE FROM appointments WHERE id = %s", (apt_id,))
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            answer_callback_query(bot_token, callback['id'], "✅ Запись отменена")
+            edit_message_text(bot_token, chat_id, message_id, f"✅ Запись #{apt_id} успешно отменена")
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'ok': True})
+            }
+        
+        elif callback_data.startswith('book_date_'):
+            selected_date = callback_data.split('_')[2]
+            cur.execute(
+                "SELECT master, appointment_time FROM appointments WHERE appointment_date = %s ORDER BY master, appointment_time",
+                (datetime.strptime(selected_date, '%Y%m%d').date(),)
+            )
+            booked = cur.fetchall()
+            
+            masters = ['Виктория', 'Алена']
+            work_hours = list(range(9, 19))
+            
+            buttons = []
+            for master in masters:
+                booked_times = [b[1].hour for b in booked if b[0] == master]
+                free_times = [h for h in work_hours if h not in booked_times]
+                
+                for hour in free_times[:5]:
+                    time_str = f"{hour:02d}:00"
+                    buttons.append([{'text': f"{master} - {time_str}", 'callback_data': f"book_time_{master}_{selected_date}_{hour:02d}00"}])
+            
+            cur.close()
+            conn.close()
+            
+            if buttons:
+                keyboard = {'inline_keyboard': buttons}
+                edit_message_text_with_keyboard(bot_token, chat_id, message_id, f"📅 Выберите мастера и время на {datetime.strptime(selected_date, '%Y%m%d').strftime('%d.%m.%Y')}:", keyboard)
+            else:
+                edit_message_text(bot_token, chat_id, message_id, "❌ На эту дату нет свободных окон")
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'ok': True})
+            }
+    
     if 'message' not in update:
         return {
             'statusCode': 200,
@@ -236,17 +297,19 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             response_text = f"❌ Ошибка при добавлении: {str(e)}\n\nПроверьте формат данных"
     
     elif text == '/free' or text == '💅 Свободные окна':
-        response_text = """💅 Свободные окна для записи:
-
-📅 Чтобы посмотреть свободные окна, напишите:
-/freeon Дата
-
-Пример:
-/freeon 30.12.2024
-
-Доступные мастера:
-• Виктория
-• Алена"""
+        response_text = "💅 Выберите дату для записи:"
+        
+        today = datetime.now().date()
+        buttons = []
+        for i in range(7):
+            date = today + timedelta(days=i)
+            date_str = date.strftime('%d.%m (%a)')
+            buttons.append([{'text': date_str, 'callback_data': f"book_date_{date.strftime('%Y%m%d')}"}])
+        
+        keyboard = {'inline_keyboard': buttons}
+        cur.close()
+        conn.close()
+        return send_telegram_message_with_inline_keyboard(bot_token, chat_id, response_text, keyboard)
     
     elif text.startswith('/freeon '):
         try:
@@ -342,11 +405,18 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             response_text = "📅 У вас пока нет записей"
         else:
             response_text = "📅 Ваши записи:\n\n"
+            buttons = []
             for apt in appointments:
                 response_text += f"💅 {apt[2]}\n"
                 response_text += f"👨‍💼 Мастер: {apt[1]}\n"
                 response_text += f"📅 {apt[3].strftime('%d.%m.%Y')} в {apt[4].strftime('%H:%M')}\n"
                 response_text += f"ID: {apt[0]}\n\n"
+                buttons.append([{'text': f"❌ Отменить запись #{apt[0]}", 'callback_data': f"cancel_{apt[0]}"}])
+            
+            keyboard = {'inline_keyboard': buttons}
+            cur.close()
+            conn.close()
+            return send_telegram_message_with_inline_keyboard(bot_token, chat_id, response_text, keyboard)
     
     elif (text == '/schedule' or text == '⚙️ График работы') and is_admin:
         today = datetime.now().date()
@@ -531,6 +601,65 @@ def send_telegram_message_async(bot_token: str, chat_id: str, text: str) -> None
             f'https://api.telegram.org/bot{bot_token}/sendMessage',
             json={'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML'},
             timeout=2
+        )
+    except Exception:
+        pass
+
+
+def send_telegram_message_with_inline_keyboard(bot_token: str, chat_id: int, text: str, keyboard: dict) -> Dict[str, Any]:
+    """Отправляет сообщение в Telegram с inline клавиатурой"""
+    import requests
+    
+    try:
+        requests.post(
+            f'https://api.telegram.org/bot{bot_token}/sendMessage',
+            json={'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML', 'reply_markup': keyboard}
+        )
+    except Exception:
+        pass
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'isBase64Encoded': False,
+        'body': json.dumps({'ok': True})
+    }
+
+
+def answer_callback_query(bot_token: str, callback_query_id: str, text: str) -> None:
+    """Отвечает на callback query"""
+    import requests
+    
+    try:
+        requests.post(
+            f'https://api.telegram.org/bot{bot_token}/answerCallbackQuery',
+            json={'callback_query_id': callback_query_id, 'text': text}
+        )
+    except Exception:
+        pass
+
+
+def edit_message_text(bot_token: str, chat_id: int, message_id: int, text: str) -> None:
+    """Редактирует текст сообщения"""
+    import requests
+    
+    try:
+        requests.post(
+            f'https://api.telegram.org/bot{bot_token}/editMessageText',
+            json={'chat_id': chat_id, 'message_id': message_id, 'text': text, 'parse_mode': 'HTML'}
+        )
+    except Exception:
+        pass
+
+
+def edit_message_text_with_keyboard(bot_token: str, chat_id: int, message_id: int, text: str, keyboard: dict) -> None:
+    """Редактирует текст сообщения с клавиатурой"""
+    import requests
+    
+    try:
+        requests.post(
+            f'https://api.telegram.org/bot{bot_token}/editMessageText',
+            json={'chat_id': chat_id, 'message_id': message_id, 'text': text, 'parse_mode': 'HTML', 'reply_markup': keyboard}
         )
     except Exception:
         pass
