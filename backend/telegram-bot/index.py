@@ -265,9 +265,10 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             keyboard = {
                 'keyboard': [
                     [{'text': '📅 Записи на сегодня'}, {'text': '📅 Записи на завтра'}],
-                    [{'text': '📅 Записи на неделю'}, {'text': '➕ Добавить клиента'}],
-                    [{'text': '⚙️ График работы'}, {'text': '➕ Добавить слот'}],
-                    [{'text': '🗑 Удалить слот'}, {'text': 'ℹ️ Помощь'}]
+                    [{'text': '📅 Записи на неделю'}, {'text': '💅 Свободные окна'}],
+                    [{'text': '➕ Добавить клиента'}, {'text': '⚙️ График работы'}],
+                    [{'text': '➕ Добавить слот'}, {'text': '🗑 Удалить слот'}],
+                    [{'text': 'ℹ️ Помощь'}]
                 ],
                 'resize_keyboard': True,
                 'one_time_keyboard': False
@@ -481,6 +482,32 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
         except Exception as e:
             response_text = f"❌ Ошибка: {str(e)}\nИспользуйте формат: /freeon 30.12.2024"
+    
+    elif (text == '💅 Свободные окна' and is_admin):
+        today = datetime.now().date()
+        
+        cur.execute(
+            "SELECT master, appointment_time FROM appointments WHERE appointment_date = %s ORDER BY master, appointment_time",
+            (today,)
+        )
+        booked = cur.fetchall()
+        
+        masters = ['Виктория', 'Алена']
+        work_hours = list(range(8, 22))
+        
+        response_text = f"💅 Свободные окна на сегодня ({today.strftime('%d.%m.%Y')}):\n\n"
+        
+        for master in masters:
+            booked_times = [b[1].hour for b in booked if b[0] == master]
+            free_times = [h for h in work_hours if h not in booked_times]
+            
+            if free_times:
+                response_text += f"👤 {master}:\n"
+                for hour in free_times:
+                    response_text += f"   {hour:02d}:00\n"
+                response_text += "\n"
+            else:
+                response_text += f"👤 {master}: нет свободных окон\n\n"
     
     elif text.startswith('/book '):
         try:
