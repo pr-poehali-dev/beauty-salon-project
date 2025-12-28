@@ -345,7 +345,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             cur.execute("SELECT message FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{chat_id}%',))
             old_message = cur.fetchone()[0]
-            phone = old_message.replace(f'add_step3_{chat_id}', '').replace(f'add_step2_{chat_id}_phone_', '')
+            # Извлекаем телефон из message формата: add_step2_{chat_id}_phone_{phone}
+            phone = old_message.replace(f'add_step2_{chat_id}_phone_', '')
             
             cur.execute(
                 "UPDATE appointments SET master = %s, message = %s WHERE client_name LIKE %s AND service = 'admin_temp'",
@@ -457,7 +458,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             cur.execute("SELECT message FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{chat_id}%',))
             message_data = cur.fetchone()[0]
-            phone = message_data.replace(f'add_step5_{chat_id}_phone_', '').replace(f'add_step4_{chat_id}_phone_', '').replace(f'add_step2_{chat_id}_phone_', '')
+            # Извлекаем телефон из message формата: add_step5_{chat_id}_phone_{phone}
+            phone = message_data.replace(f'add_step5_{chat_id}_phone_', '')
             
             cur.execute(
                 "DELETE FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'",
