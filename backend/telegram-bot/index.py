@@ -3,6 +3,54 @@ import os
 from typing import Dict, Any
 import psycopg2
 from datetime import datetime, timedelta
+import calendar
+
+def generate_calendar(year, month, prefix='cal'):
+    """Генерация inline-календаря для выбора даты"""
+    keyboard = []
+    
+    # Заголовок с месяцем и годом
+    month_names = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
+    header = [{'text': f"📅 {month_names[month-1]} {year}", 'callback_data': 'ignore'}]
+    keyboard.append(header)
+    
+    # Дни недели
+    week_days = [{'text': d, 'callback_data': 'ignore'} for d in ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']]
+    keyboard.append(week_days)
+    
+    # Генерация дней месяца
+    cal = calendar.monthcalendar(year, month)
+    today = datetime.now().date()
+    
+    for week in cal:
+        week_buttons = []
+        for day in week:
+            if day == 0:
+                week_buttons.append({'text': ' ', 'callback_data': 'ignore'})
+            else:
+                date_obj = datetime(year, month, day).date()
+                if date_obj < today:
+                    # Прошедшие даты
+                    week_buttons.append({'text': '•', 'callback_data': 'ignore'})
+                else:
+                    # Доступные даты
+                    week_buttons.append({'text': str(day), 'callback_data': f"{prefix}_{year}-{month:02d}-{day:02d}"})
+        keyboard.append(week_buttons)
+    
+    # Навигация по месяцам
+    nav = []
+    prev_month = month - 1 if month > 1 else 12
+    prev_year = year if month > 1 else year - 1
+    next_month = month + 1 if month < 12 else 1
+    next_year = year if month < 12 else year + 1
+    
+    nav.append({'text': '◀️', 'callback_data': f"{prefix}_nav_{prev_year}-{prev_month:02d}"})
+    nav.append({'text': 'Отмена', 'callback_data': 'cancel_calendar'})
+    nav.append({'text': '▶️', 'callback_data': f"{prefix}_nav_{next_year}-{next_month:02d}"})
+    
+    keyboard.append(nav)
+    
+    return {'inline_keyboard': keyboard}
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
@@ -190,19 +238,122 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'body': json.dumps({'ok': True})
             }
         
+        elif callback_data.startswith('addclient_date_') and '_nav_' in callback_data:
+            # Навигация по календарю
+            parts = callback_data.split('_')
+            user_id = parts[2]
+            year_month = parts[4]
+            year, month = map(int, year_month.split('-'))
+            
+            calendar_kb = generate_calendar(year, month, f'addclient_date_{user_id}')
+            
+            cur.execute("SELECT client_name FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{user_id}%',))
+            if cur.fetchone():
+                full_name = cur.fetchone()[0]
+                client_name = full_name.replace(f'admin_add_{user_id}_', '')
+                
+                cur.execute("SELECT message FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{user_id}%',))
+                msg_data = cur.fetchone()
+                phone = msg_data[0].replace(f'add_step2_{user_id}_phone_', '') if msg_data else ''
+                
+                response_text = f"📝 Добавление клиента - Шаг 3 из 6\n\n"
+                response_text += f"👤 {client_name}\n"
+                response_text += f"📞 {phone}\n\n"
+                response_text += "Выберите дату записи:"
+                
+                edit_message_text_with_keyboard(bot_token, chat_id, message_id, response_text, calendar_kb)
+                answer_callback_query(bot_token, callback['id'])
+            
+            cur.close()
+            conn.close()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'ok': True})
+            }
+        
+        elif callback_data.startswith('addclient_date_') and not '_nav_' in callback_data:
+            # Выбор даты из календаря
+            parts = callback_data.split('_')
+            user_id = parts[2]
+            selected_date = parts[3]
+            appointment_date = datetime.strptime(selected_date, '%Y-%m-%d').date()
+            
+            cur.execute(
+                "UPDATE appointments SET appointment_date = %s, message = %s WHERE client_name LIKE %s AND service = 'admin_temp'",
+                (appointment_date, f'add_step3_{user_id}', f'admin_add_{user_id}%')
+            )
+            conn.commit()
+            
+            cur.execute("SELECT client_name, message FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{user_id}%',))
+            data = cur.fetchone()
+            
+            client_name = data[0].replace(f'admin_add_{user_id}_', '')
+            phone = data[1].replace(f'add_step3_{user_id}', '').replace(f'add_step2_{user_id}_phone_', '')
+            
+            masters = ['Виктория', 'Алена']
+            buttons = []
+            for master in masters:
+                buttons.append([{'text': f"👤 {master}", 'callback_data': f"addclient_master_{master}"}])
+            
+            keyboard = {'inline_keyboard': buttons}
+            
+            response_text = f"📝 Добавление клиента - Шаг 4 из 6\n\n"
+            response_text += f"👤 {client_name}\n"
+            response_text += f"📞 {phone}\n"
+            response_text += f"📅 {appointment_date.strftime('%d.%m.%Y')}\n\n"
+            response_text += "Выберите мастера:"
+            
+            edit_message_text_with_keyboard(bot_token, chat_id, message_id, response_text, keyboard)
+            answer_callback_query(bot_token, callback['id'], "✅ Выберите мастера")
+            
+            cur.close()
+            conn.close()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'ok': True})
+            }
+        
+        elif callback_data == 'cancel_calendar':
+            edit_message_text(bot_token, chat_id, message_id, "❌ Отменено")
+            answer_callback_query(bot_token, callback['id'], "Отменено")
+            
+            cur.close()
+            conn.close()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'ok': True})
+            }
+        
+        elif callback_data == 'ignore':
+            answer_callback_query(bot_token, callback['id'])
+            cur.close()
+            conn.close()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'ok': True})
+            }
+        
         elif callback_data.startswith('addclient_master_'):
             master = callback_data.split('_', 2)[2]
             
             cur.execute(
-                "UPDATE appointments SET master = %s, message = %s WHERE client_name = %s AND service = 'admin_temp'",
-                (master, f'add_step4_{chat_id}', f'admin_add_{chat_id}')
+                "UPDATE appointments SET master = %s, message = %s WHERE client_name LIKE %s AND service = 'admin_temp'",
+                (master, f'add_step4_{chat_id}', f'admin_add_{chat_id}%')
             )
             conn.commit()
             cur.close()
             conn.close()
             
             cur2 = psycopg2.connect(os.environ['DATABASE_URL']).cursor()
-            cur2.execute("SELECT client_name, client_phone, appointment_date FROM appointments WHERE client_name = %s AND service = 'admin_temp'", (f'admin_add_{chat_id}',))
+            cur2.execute("SELECT client_name, client_phone, appointment_date FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{chat_id}%',))
             data = cur2.fetchone()
             cur2.close()
             
@@ -996,49 +1147,18 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 full_name = cur.fetchone()[0]
                 client_name = full_name.replace(f'admin_add_{chat_id}_', '')
                 
+                now = datetime.now()
+                calendar_kb = generate_calendar(now.year, now.month, f'addclient_date_{chat_id}')
+                
                 response_text = f"📝 Добавление клиента - Шаг 3 из 6\n\n"
                 response_text += f"👤 {client_name}\n"
                 response_text += f"📞 {phone}\n\n"
-                response_text += "Введите дату в формате ДД.ММ.ГГГГ\n\n"
-                response_text += "Например: 30.12.2024"
+                response_text += "Выберите дату записи:"
+                
+                cur.close()
+                conn.close()
+                return send_telegram_message_with_inline_keyboard(bot_token, chat_id, response_text, calendar_kb)
             
-            elif step_message.startswith(f'add_step2_{chat_id}_phone_'):
-                try:
-                    date_str = text.strip()
-                    appointment_date = datetime.strptime(date_str, '%d.%m.%Y').date()
-                    
-                    cur.execute(
-                        "UPDATE appointments SET appointment_date = %s, message = %s WHERE client_name LIKE %s AND service = 'admin_temp'",
-                        (appointment_date, f'add_step3_{chat_id}', f'admin_add_{chat_id}%')
-                    )
-                    conn.commit()
-                    
-                    masters = ['Виктория', 'Алена']
-                    buttons = []
-                    for master in masters:
-                        buttons.append([{'text': f"👤 {master}", 'callback_data': f"addclient_master_{master}"}])
-                    
-                    keyboard = {'inline_keyboard': buttons}
-                    cur.close()
-                    conn.close()
-                    
-                    cur2 = psycopg2.connect(os.environ['DATABASE_URL']).cursor()
-                    cur2.execute("SELECT client_name, message FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{chat_id}%',))
-                    data = cur2.fetchone()
-                    cur2.close()
-                    
-                    client_name = data[0].replace(f'admin_add_{chat_id}_', '')
-                    phone = data[1].replace(f'add_step3_{chat_id}', '').replace(f'add_step2_{chat_id}_phone_', '')
-                    
-                    response_text = f"📝 Добавление клиента - Шаг 4 из 6\n\n"
-                    response_text += f"👤 {client_name}\n"
-                    response_text += f"📞 {phone}\n"
-                    response_text += f"📅 {date_str}\n\n"
-                    response_text += "Выберите мастера:"
-                    
-                    return send_telegram_message_with_inline_keyboard(bot_token, chat_id, response_text, keyboard)
-                except:
-                    response_text = "❌ Неверный формат даты. Используйте ДД.ММ.ГГГГ\n\nНапример: 30.12.2024"
             
             elif step_message.startswith(f'slot_step2_{chat_id}'):
                 date_input = text.strip()
