@@ -62,29 +62,37 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         if is_admin:
             response_text = """👋 Добро пожаловать, мастер!
 
-📋 Команды для мастеров:
-/today - Записи на сегодня
-/tomorrow - Записи на завтра
-/week - Записи на неделю
-/add - Добавить клиента
-
-⚙️ Управление графиком:
-/schedule - Посмотреть график работы
-/addslot - Добавить рабочее время
-/removeslot - Удалить рабочее время
-
-/help - Полная справка"""
+Выберите действие с помощью кнопок ниже 👇"""
+            keyboard = {
+                'keyboard': [
+                    [{'text': '📅 Записи на сегодня'}, {'text': '📅 Записи на завтра'}],
+                    [{'text': '📅 Записи на неделю'}, {'text': '➕ Добавить клиента'}],
+                    [{'text': '⚙️ График работы'}, {'text': '➕ Добавить слот'}],
+                    [{'text': '🗑 Удалить слот'}, {'text': 'ℹ️ Помощь'}]
+                ],
+                'resize_keyboard': True,
+                'one_time_keyboard': False
+            }
+            cur.close()
+            conn.close()
+            return send_telegram_message_with_keyboard(bot_token, chat_id, response_text, keyboard)
         else:
             response_text = """👋 Добро пожаловать в салон красоты!
 
-💅 Доступные команды:
-/free - Посмотреть свободные окна
-/book - Записаться на услугу
-/myappointments - Мои записи
-
-/help - Помощь"""
+Выберите действие с помощью кнопок ниже 👇"""
+            keyboard = {
+                'keyboard': [
+                    [{'text': '💅 Свободные окна'}, {'text': '📝 Записаться'}],
+                    [{'text': '📋 Мои записи'}, {'text': 'ℹ️ Помощь'}]
+                ],
+                'resize_keyboard': True,
+                'one_time_keyboard': False
+            }
+            cur.close()
+            conn.close()
+            return send_telegram_message_with_keyboard(bot_token, chat_id, response_text, keyboard)
         
-    elif text == '/help':
+    elif text == '/help' or text == 'ℹ️ Помощь':
         if is_admin:
             response_text = """📖 Справка для мастеров:
 
@@ -119,7 +127,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
 /myappointments - Посмотреть ваши записи"""
     
-    elif text == '/today' and is_admin:
+    elif (text == '/today' or text == '📅 Записи на сегодня') and is_admin:
         today = datetime.now().date()
         cur.execute(
             "SELECT id, master, client_name, client_phone, service, appointment_time FROM appointments WHERE appointment_date = %s ORDER BY appointment_time",
@@ -137,7 +145,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 response_text += f"💅 {apt[4]}\n"
                 response_text += f"ID: {apt[0]}\n\n"
     
-    elif text == '/tomorrow' and is_admin:
+    elif (text == '/tomorrow' or text == '📅 Записи на завтра') and is_admin:
         tomorrow = datetime.now().date() + timedelta(days=1)
         cur.execute(
             "SELECT id, master, client_name, client_phone, service, appointment_time FROM appointments WHERE appointment_date = %s ORDER BY appointment_time",
@@ -155,7 +163,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 response_text += f"💅 {apt[4]}\n"
                 response_text += f"ID: {apt[0]}\n\n"
     
-    elif text == '/week' and is_admin:
+    elif (text == '/week' or text == '📅 Записи на неделю') and is_admin:
         today = datetime.now().date()
         week_end = today + timedelta(days=7)
         cur.execute(
@@ -177,7 +185,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 response_text += f"👤 {apt[2]} ({apt[3]})\n"
                 response_text += f"💅 {apt[4]}\n\n"
     
-    elif text == '/add' and is_admin:
+    elif (text == '/add' or text == '➕ Добавить клиента') and is_admin:
         response_text = """➕ Чтобы добавить клиента, отправьте сообщение в формате:
 
 /new Имя | Телефон | Услуга | Дата | Время | Мастер
@@ -227,7 +235,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         except Exception as e:
             response_text = f"❌ Ошибка при добавлении: {str(e)}\n\nПроверьте формат данных"
     
-    elif text == '/free':
+    elif text == '/free' or text == '💅 Свободные окна':
         response_text = """💅 Свободные окна для записи:
 
 📅 Чтобы посмотреть свободные окна, напишите:
@@ -237,9 +245,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 /freeon 30.12.2024
 
 Доступные мастера:
-• Анна
-• Катя
-• Света"""
+• Виктория
+• Алена"""
     
     elif text.startswith('/freeon '):
         try:
@@ -252,7 +259,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             )
             booked = cur.fetchall()
             
-            masters = ['Анна', 'Катя', 'Света']
+            masters = ['Виктория', 'Алена']
             work_hours = list(range(9, 19))
             
             response_text = f"💅 Свободные окна на {appointment_date.strftime('%d.%m.%Y')}:\n\n"
@@ -324,7 +331,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         except Exception as e:
             response_text = f"❌ Ошибка при записи: {str(e)}\n\nПроверьте формат данных"
     
-    elif text == '/myappointments':
+    elif text == '/myappointments' or text == '📋 Мои записи':
         cur.execute(
             "SELECT id, master, service, appointment_date, appointment_time FROM appointments WHERE message LIKE %s AND appointment_date >= %s ORDER BY appointment_date, appointment_time",
             (f'%клиента {chat_id}%', datetime.now().date())
@@ -341,7 +348,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 response_text += f"📅 {apt[3].strftime('%d.%m.%Y')} в {apt[4].strftime('%H:%M')}\n"
                 response_text += f"ID: {apt[0]}\n\n"
     
-    elif text == '/schedule' and is_admin:
+    elif (text == '/schedule' or text == '⚙️ График работы') and is_admin:
         today = datetime.now().date()
         week_end = today + timedelta(days=7)
         cur.execute(
@@ -361,7 +368,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     response_text += f"\n📆 {current_date.strftime('%d.%m.%Y')}\n"
                 response_text += f"👤 {item[0]}: {item[2].strftime('%H:%M')} - {item[3].strftime('%H:%M')}\n"
     
-    elif text == '/addslot' and is_admin:
+    elif (text == '/addslot' or text == '➕ Добавить слот') and is_admin:
         response_text = """➕ Добавить рабочее время:
 
 Формат:
@@ -423,7 +430,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         except Exception as e:
             response_text = f"❌ Ошибка: {str(e)}\n\nПроверьте формат данных"
     
-    elif text == '/removeslot' and is_admin:
+    elif (text == '/removeslot' or text == '🗑 Удалить слот') and is_admin:
         response_text = """🗑 Удалить рабочее время:
 
 Формат:
@@ -483,6 +490,26 @@ def send_telegram_message(bot_token: str, chat_id: int, text: str) -> Dict[str, 
         requests.post(
             f'https://api.telegram.org/bot{bot_token}/sendMessage',
             json={'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML'}
+        )
+    except Exception:
+        pass
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+        'isBase64Encoded': False,
+        'body': json.dumps({'ok': True})
+    }
+
+
+def send_telegram_message_with_keyboard(bot_token: str, chat_id: int, text: str, keyboard: dict) -> Dict[str, Any]:
+    """Отправляет сообщение в Telegram с клавиатурой"""
+    import requests
+    
+    try:
+        requests.post(
+            f'https://api.telegram.org/bot{bot_token}/sendMessage',
+            json={'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML', 'reply_markup': keyboard}
         )
     except Exception:
         pass
