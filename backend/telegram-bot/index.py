@@ -393,12 +393,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             service = callback_data.split('_', 2)[2]
             
             cur.execute(
-                "UPDATE appointments SET client_phone = %s, message = %s WHERE client_name = %s AND service = 'admin_temp'",
-                (service, f'add_step5_{chat_id}', f'admin_add_{chat_id}')
+                "UPDATE appointments SET client_phone = %s, message = %s WHERE client_name LIKE %s AND service = 'admin_temp'",
+                (service, f'add_step5_{chat_id}', f'admin_add_{chat_id}%')
             )
             conn.commit()
             
-            cur.execute("SELECT client_name, appointment_date, master FROM appointments WHERE client_name = %s AND service = 'admin_temp'", (f'admin_add_{chat_id}',))
+            cur.execute("SELECT client_name, appointment_date, master FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{chat_id}%',))
             data = cur.fetchone()
             
             client_name = data[0].replace(f'admin_add_{chat_id}_', '')
@@ -445,7 +445,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             time_str = callback_data.split('_')[2]
             appointment_time = datetime.strptime(time_str, '%H%M').time()
             
-            cur.execute("SELECT client_name, client_phone, appointment_date, master FROM appointments WHERE client_name = %s AND service = 'admin_temp'", (f'admin_add_{chat_id}',))
+            cur.execute("SELECT client_name, client_phone, appointment_date, master FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{chat_id}%',))
             data = cur.fetchone()
             
             real_client_name = data[0].replace(f'admin_add_{chat_id}_', '')
@@ -453,12 +453,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             appointment_date = data[2]
             master = data[3]
             
-            cur.execute("SELECT message FROM appointments WHERE client_name = %s AND service = 'admin_temp'", (f'admin_add_{chat_id}',))
-            phone = cur.fetchone()[0].replace(f'add_step5_{chat_id}_phone_', '')
+            cur.execute("SELECT message FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{chat_id}%',))
+            phone = cur.fetchone()[0].replace(f'add_step5_{chat_id}_phone_', '').replace(f'add_step2_{chat_id}_phone_', '')
             
             cur.execute(
-                "DELETE FROM appointments WHERE client_name = %s AND service = 'admin_temp'",
-                (f'admin_add_{chat_id}',)
+                "DELETE FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'",
+                (f'admin_add_{chat_id}%',)
             )
             
             cur.execute(
