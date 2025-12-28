@@ -247,14 +247,13 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             calendar_kb = generate_calendar(year, month, f'addclient_date_{user_id}')
             
-            cur.execute("SELECT client_name FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{user_id}%',))
-            if cur.fetchone():
-                full_name = cur.fetchone()[0]
+            cur.execute("SELECT client_name, message FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{user_id}%',))
+            result = cur.fetchone()
+            
+            if result:
+                full_name = result[0]
                 client_name = full_name.replace(f'admin_add_{user_id}_', '')
-                
-                cur.execute("SELECT message FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{user_id}%',))
-                msg_data = cur.fetchone()
-                phone = msg_data[0].replace(f'add_step2_{user_id}_phone_', '') if msg_data else ''
+                phone = result[1].replace(f'add_step2_{user_id}_phone_', '')
                 
                 response_text = f"📝 Добавление клиента - Шаг 3 из 6\n\n"
                 response_text += f"👤 {client_name}\n"
@@ -1361,14 +1360,17 @@ def send_telegram_message_with_inline_keyboard(bot_token: str, chat_id: int, tex
     }
 
 
-def answer_callback_query(bot_token: str, callback_query_id: str, text: str) -> None:
+def answer_callback_query(bot_token: str, callback_query_id: str, text: str = '') -> None:
     """Отвечает на callback query"""
     import requests
     
     try:
+        payload = {'callback_query_id': callback_query_id}
+        if text:
+            payload['text'] = text
         requests.post(
             f'https://api.telegram.org/bot{bot_token}/answerCallbackQuery',
-            json={'callback_query_id': callback_query_id, 'text': text}
+            json=payload
         )
     except Exception:
         pass
