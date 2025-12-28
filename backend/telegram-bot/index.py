@@ -122,7 +122,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     elif text == '/today' and is_admin:
         today = datetime.now().date()
         cur.execute(
-            "SELECT id, master, client_name, client_phone, service, appointment_time FROM t_p5914469_beauty_salon_project.appointments WHERE appointment_date = %s ORDER BY appointment_time",
+            "SELECT id, master, client_name, client_phone, service, appointment_time FROM appointments WHERE appointment_date = %s ORDER BY appointment_time",
             (today,)
         )
         appointments = cur.fetchall()
@@ -140,7 +140,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     elif text == '/tomorrow' and is_admin:
         tomorrow = datetime.now().date() + timedelta(days=1)
         cur.execute(
-            "SELECT id, master, client_name, client_phone, service, appointment_time FROM t_p5914469_beauty_salon_project.appointments WHERE appointment_date = %s ORDER BY appointment_time",
+            "SELECT id, master, client_name, client_phone, service, appointment_time FROM appointments WHERE appointment_date = %s ORDER BY appointment_time",
             (tomorrow,)
         )
         appointments = cur.fetchall()
@@ -159,7 +159,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         today = datetime.now().date()
         week_end = today + timedelta(days=7)
         cur.execute(
-            "SELECT id, master, client_name, client_phone, service, appointment_date, appointment_time FROM t_p5914469_beauty_salon_project.appointments WHERE appointment_date BETWEEN %s AND %s ORDER BY appointment_date, appointment_time",
+            "SELECT id, master, client_name, client_phone, service, appointment_date, appointment_time FROM appointments WHERE appointment_date BETWEEN %s AND %s ORDER BY appointment_date, appointment_time",
             (today, week_end)
         )
         appointments = cur.fetchall()
@@ -204,14 +204,14 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 appointment_time = datetime.strptime(time_str, '%H:%M').time()
                 
                 cur.execute(
-                    "SELECT COUNT(*) FROM t_p5914469_beauty_salon_project.appointments WHERE appointment_date = %s AND appointment_time = %s AND master = %s",
+                    "SELECT COUNT(*) FROM appointments WHERE appointment_date = %s AND appointment_time = %s AND master = %s",
                     (appointment_date, appointment_time, master)
                 )
                 if cur.fetchone()[0] > 0:
                     response_text = f"❌ На это время у мастера {master} уже есть запись!\nВыберите другое время."
                 else:
                     cur.execute(
-                        "INSERT INTO t_p5914469_beauty_salon_project.appointments (master, client_name, client_phone, service, appointment_date, appointment_time, message) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                        "INSERT INTO appointments (master, client_name, client_phone, service, appointment_date, appointment_time, message) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
                         (master, client_name, client_phone, service, appointment_date, appointment_time, 'Добавлено через бот')
                     )
                     apt_id = cur.fetchone()[0]
@@ -247,7 +247,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             appointment_date = datetime.strptime(date_str, '%d.%m.%Y').date()
             
             cur.execute(
-                "SELECT master, appointment_time FROM t_p5914469_beauty_salon_project.appointments WHERE appointment_date = %s ORDER BY master, appointment_time",
+                "SELECT master, appointment_time FROM appointments WHERE appointment_date = %s ORDER BY master, appointment_time",
                 (appointment_date,)
             )
             booked = cur.fetchall()
@@ -291,14 +291,14 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 appointment_time = datetime.strptime(time_str, '%H:%M').time()
                 
                 cur.execute(
-                    "SELECT COUNT(*) FROM t_p5914469_beauty_salon_project.appointments WHERE appointment_date = %s AND appointment_time = %s AND master = %s",
+                    "SELECT COUNT(*) FROM appointments WHERE appointment_date = %s AND appointment_time = %s AND master = %s",
                     (appointment_date, appointment_time, master)
                 )
                 if cur.fetchone()[0] > 0:
                     response_text = f"❌ К сожалению, это время уже занято!\n\nИспользуйте /freeon {date_str} чтобы посмотреть свободные окна"
                 else:
                     cur.execute(
-                        "INSERT INTO t_p5914469_beauty_salon_project.appointments (master, client_name, client_phone, service, appointment_date, appointment_time, message) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                        "INSERT INTO appointments (master, client_name, client_phone, service, appointment_date, appointment_time, message) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
                         (master, client_name, client_phone, service, appointment_date, appointment_time, f'Запись через бот от клиента {chat_id}')
                     )
                     apt_id = cur.fetchone()[0]
@@ -326,7 +326,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     elif text == '/myappointments':
         cur.execute(
-            "SELECT id, master, service, appointment_date, appointment_time FROM t_p5914469_beauty_salon_project.appointments WHERE message LIKE %s AND appointment_date >= %s ORDER BY appointment_date, appointment_time",
+            "SELECT id, master, service, appointment_date, appointment_time FROM appointments WHERE message LIKE %s AND appointment_date >= %s ORDER BY appointment_date, appointment_time",
             (f'%клиента {chat_id}%', datetime.now().date())
         )
         appointments = cur.fetchall()
