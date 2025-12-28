@@ -144,21 +144,87 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             cur.execute(
                 "INSERT INTO appointments (master, client_name, client_phone, service, appointment_date, appointment_time, message) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
-                (master, f'temp_{chat_id}', '', 'temp', appointment_date, appointment_time, f'pending_{chat_id}')
+                (master, f'temp_{chat_id}', '', 'temp', appointment_date, appointment_time, f'step1_{chat_id}')
             )
             temp_apt_id = cur.fetchone()[0]
             conn.commit()
             cur.close()
             conn.close()
             
-            response_text = f"📝 Для завершения записи отправьте сообщение:\n\n"
-            response_text += f"Ваше имя | Телефон | Услуга\n\n"
-            response_text += f"Пример:\n"
-            response_text += f"Анна Смирнова | +79001234567 | Маникюр\n\n"
+            response_text = f"📝 Шаг 1 из 3: Введите ваше имя\n\n"
+            response_text += f"Например: Анна Смирнова\n\n"
             response_text += f"📅 {master}, {appointment_date.strftime('%d.%m.%Y')} в {appointment_time.strftime('%H:%M')}"
             
             edit_message_text(bot_token, chat_id, message_id, response_text)
-            answer_callback_query(bot_token, callback['id'], "✅ Введите данные в чат")
+            answer_callback_query(bot_token, callback['id'], "✅ Введите ваше имя")
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'ok': True})
+            }
+        
+        elif callback_data.startswith('service_'):
+            service = callback_data.split('_', 1)[1]
+            
+            cur.execute(
+                "SELECT id, master, appointment_date, appointment_time FROM appointments WHERE message LIKE %s AND service = 'temp'",
+                (f'step3_{chat_id}%',)
+            )
+            pending = cur.fetchone()
+            
+            if pending:
+                apt_id = pending[0]
+                master = pending[1]
+                appointment_date = pending[2]
+                appointment_time = pending[3]
+                
+                cur.execute(
+                    "SELECT client_name, client_phone FROM appointments WHERE id = %s",
+                    (apt_id,)
+                )
+                client_data = cur.fetchone()
+                client_name = client_data[0]
+                client_phone = client_data[1]
+                
+                cur.execute(
+                    "UPDATE appointments SET service = %s, message = %s WHERE id = %s",
+                    (service, f'Запись через бот от клиента {chat_id}', apt_id)
+                )
+                conn.commit()
+                
+                admin_chat_ids = [
+                    os.environ.get('TELEGRAM_CHAT_ID'),
+                    os.environ.get('TELEGRAM_CHAT_ID_2'),
+                    os.environ.get('TELEGRAM_CHAT_ID_3'),
+                    os.environ.get('TELEGRAM_CHAT_ID_4'),
+                    os.environ.get('TELEGRAM_CHAT_ID_5')
+                ]
+                admin_chat_ids = [cid for cid in admin_chat_ids if cid]
+                
+                response_text = f"✅ Вы успешно записаны!\n\n"
+                response_text += f"ID записи: {apt_id}\n"
+                response_text += f"👤 {client_name}\n"
+                response_text += f"📞 {client_phone}\n"
+                response_text += f"💅 {service}\n"
+                response_text += f"👨‍💼 Мастер: {master}\n"
+                response_text += f"📅 {appointment_date.strftime('%d.%m.%Y')} в {appointment_time.strftime('%H:%M')}\n\n"
+                response_text += f"📋 Посмотреть записи: нажмите 📋 Мои записи"
+                
+                edit_message_text(bot_token, chat_id, message_id, response_text)
+                answer_callback_query(bot_token, callback['id'], "✅ Запись создана!")
+                
+                for admin_id in admin_chat_ids:
+                    notify_text = f"🔔 Новая запись через бот!\n\n"
+                    notify_text += f"👤 {client_name} ({client_phone})\n"
+                    notify_text += f"💅 {service}\n"
+                    notify_text += f"👨‍💼 Мастер: {master}\n"
+                    notify_text += f"📅 {appointment_date.strftime('%d.%m.%Y')} в {appointment_time.strftime('%H:%M')}\n"
+                    notify_text += f"ID: {apt_id}"
+                    send_telegram_message_async(bot_token, admin_id, notify_text)
+            
+            cur.close()
+            conn.close()
             
             return {
                 'statusCode': 200,
@@ -613,59 +679,72 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             response_text = f"❌ Ошибка: {str(e)}\n\nПроверьте формат данных"
     
     else:
-        if '|' in text and not is_admin:
+        if not is_admin:
             cur.execute(
-                "SELECT id, master, appointment_date, appointment_time FROM appointments WHERE message = %s AND service = 'temp'",
-                (f'pending_{chat_id}',)
+                "SELECT id, master, appointment_date, appointment_time, message FROM appointments WHERE message LIKE %s AND service = 'temp'",
+                (f'step%_{chat_id}',)
             )
             pending = cur.fetchone()
             
             if pending:
-                try:
-                    parts = [p.strip() for p in text.split('|')]
+                apt_id = pending[0]
+                master = pending[1]
+                appointment_date = pending[2]
+                appointment_time = pending[3]
+                step_message = pending[4]
+                
+                if step_message.startswith(f'step1_{chat_id}'):
+                    client_name = text.strip()
                     
-                    if len(parts) >= 3:
-                        client_name = parts[0]
-                        client_phone = parts[1]
-                        service = parts[2]
-                        
-                        apt_id = pending[0]
-                        master = pending[1]
-                        appointment_date = pending[2]
-                        appointment_time = pending[3]
-                        
-                        cur.execute(
-                            "UPDATE appointments SET client_name = %s, client_phone = %s, service = %s, message = %s WHERE id = %s",
-                            (client_name, client_phone, service, f'Запись через бот от клиента {chat_id}', apt_id)
-                        )
-                        conn.commit()
-                        
-                        response_text = f"✅ Вы успешно записаны!\n\n"
-                        response_text += f"ID записи: {apt_id}\n"
-                        response_text += f"👤 {client_name}\n"
-                        response_text += f"📞 {client_phone}\n"
-                        response_text += f"💅 {service}\n"
-                        response_text += f"👨‍💼 Мастер: {master}\n"
-                        response_text += f"📅 {appointment_date.strftime('%d.%m.%Y')} в {appointment_time.strftime('%H:%M')}\n\n"
-                        response_text += f"📋 Посмотреть записи: /myappointments"
-                        
-                        for admin_id in admin_chat_ids:
-                            notify_text = f"🔔 Новая запись через бот!\n\n"
-                            notify_text += f"👤 {client_name} ({client_phone})\n"
-                            notify_text += f"💅 {service}\n"
-                            notify_text += f"👨‍💼 Мастер: {master}\n"
-                            notify_text += f"📅 {appointment_date.strftime('%d.%m.%Y')} в {appointment_time.strftime('%H:%M')}\n"
-                            notify_text += f"ID: {apt_id}"
-                            send_telegram_message_async(bot_token, admin_id, notify_text)
-                    else:
-                        response_text = "❌ Неверный формат. Используйте:\nИмя | Телефон | Услуга"
-                except Exception as e:
-                    response_text = f"❌ Ошибка: {str(e)}\n\nИспользуйте формат: Имя | Телефон | Услуга"
-            else:
-                if is_admin:
-                    response_text = "❓ Неизвестная команда. Используйте /help для списка команд"
+                    cur.execute(
+                        "UPDATE appointments SET client_name = %s, message = %s WHERE id = %s",
+                        (client_name, f'step2_{chat_id}', apt_id)
+                    )
+                    conn.commit()
+                    
+                    response_text = f"📝 Шаг 2 из 3: Введите ваш телефон\n\n"
+                    response_text += f"Например: +79001234567\n\n"
+                    response_text += f"👤 {client_name}\n"
+                    response_text += f"📅 {master}, {appointment_date.strftime('%d.%m.%Y')} в {appointment_time.strftime('%H:%M')}"
+                
+                elif step_message.startswith(f'step2_{chat_id}'):
+                    client_phone = text.strip()
+                    
+                    cur.execute(
+                        "UPDATE appointments SET client_phone = %s, message = %s WHERE id = %s",
+                        (client_phone, f'step3_{chat_id}', apt_id)
+                    )
+                    conn.commit()
+                    
+                    cur.execute("SELECT client_name FROM appointments WHERE id = %s", (apt_id,))
+                    client_name = cur.fetchone()[0]
+                    
+                    services = [
+                        'Маникюр', 'Педикюр', 'Маникюр + Педикюр',
+                        'Наращивание ногтей', 'Покрытие гель-лак',
+                        'Снятие покрытия', 'Дизайн ногтей',
+                        'Парафинотерапия', 'SPA-уход для рук/ног'
+                    ]
+                    
+                    buttons = []
+                    for service in services:
+                        buttons.append([{'text': service, 'callback_data': f'service_{service}'}])
+                    
+                    keyboard = {'inline_keyboard': buttons}
+                    cur.close()
+                    conn.close()
+                    
+                    response_text = f"📝 Шаг 3 из 3: Выберите услугу\n\n"
+                    response_text += f"👤 {client_name}\n"
+                    response_text += f"📞 {client_phone}\n"
+                    response_text += f"📅 {master}, {appointment_date.strftime('%d.%m.%Y')} в {appointment_time.strftime('%H:%M')}"
+                    
+                    return send_telegram_message_with_inline_keyboard(bot_token, chat_id, response_text, keyboard)
+                
                 else:
                     response_text = "❓ Неизвестная команда.\n\nДоступные команды:\n💅 Свободные окна\n📋 Мои записи\nℹ️ Помощь"
+            else:
+                response_text = "❓ Неизвестная команда.\n\nДоступные команды:\n💅 Свободные окна\n📋 Мои записи\nℹ️ Помощь"
         else:
             if is_admin:
                 response_text = "❓ Неизвестная команда. Используйте /help для списка команд"
