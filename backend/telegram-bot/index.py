@@ -341,6 +341,128 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 response_text += f"📅 {apt[3].strftime('%d.%m.%Y')} в {apt[4].strftime('%H:%M')}\n"
                 response_text += f"ID: {apt[0]}\n\n"
     
+    elif text == '/schedule' and is_admin:
+        today = datetime.now().date()
+        week_end = today + timedelta(days=7)
+        cur.execute(
+            "SELECT master, work_date, start_time, end_time FROM work_schedule WHERE work_date BETWEEN %s AND %s ORDER BY work_date, master, start_time",
+            (today, week_end)
+        )
+        schedule = cur.fetchall()
+        
+        if not schedule:
+            response_text = "📅 График работы на неделю не установлен\n\nИспользуйте /addslot для добавления рабочего времени"
+        else:
+            response_text = "📅 График работы на неделю:\n\n"
+            current_date = None
+            for item in schedule:
+                if item[1] != current_date:
+                    current_date = item[1]
+                    response_text += f"\n📆 {current_date.strftime('%d.%m.%Y')}\n"
+                response_text += f"👤 {item[0]}: {item[2].strftime('%H:%M')} - {item[3].strftime('%H:%M')}\n"
+    
+    elif text == '/addslot' and is_admin:
+        response_text = """➕ Добавить рабочее время:
+
+Формат:
+/addslot Дата | Время начала | Время конца | Мастер
+
+Пример:
+/addslot 30.12.2024 | 09:00 | 18:00 | Анна
+
+Или добавить на всю неделю:
+/addslot 30.12.2024-05.01.2025 | 09:00 | 18:00 | Анна"""
+    
+    elif text.startswith('/addslot ') and is_admin:
+        try:
+            data = text[9:].strip()
+            parts = [p.strip() for p in data.split('|')]
+            
+            if len(parts) < 4:
+                response_text = "❌ Неверный формат. Используйте:\n/addslot Дата | Время начала | Время конца | Мастер"
+            else:
+                date_str = parts[0]
+                start_time_str = parts[1]
+                end_time_str = parts[2]
+                master = parts[3]
+                
+                start_time = datetime.strptime(start_time_str, '%H:%M').time()
+                end_time = datetime.strptime(end_time_str, '%H:%M').time()
+                
+                dates_to_add = []
+                if '-' in date_str:
+                    date_parts = date_str.split('-')
+                    start_date = datetime.strptime(date_parts[0].strip(), '%d.%m.%Y').date()
+                    end_date = datetime.strptime(date_parts[1].strip(), '%d.%m.%Y').date()
+                    current = start_date
+                    while current <= end_date:
+                        dates_to_add.append(current)
+                        current += timedelta(days=1)
+                else:
+                    dates_to_add.append(datetime.strptime(date_str, '%d.%m.%Y').date())
+                
+                added_count = 0
+                for work_date in dates_to_add:
+                    try:
+                        cur.execute(
+                            "INSERT INTO work_schedule (master, work_date, start_time, end_time) VALUES (%s, %s, %s, %s)",
+                            (master, work_date, start_time, end_time)
+                        )
+                        added_count += 1
+                    except Exception:
+                        pass
+                
+                conn.commit()
+                
+                if added_count > 0:
+                    response_text = f"✅ Добавлено {added_count} рабочих дней для {master}\n\n"
+                    response_text += f"⏰ {start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')}"
+                else:
+                    response_text = "⚠️ Эти слоты уже существуют в графике"
+                    
+        except Exception as e:
+            response_text = f"❌ Ошибка: {str(e)}\n\nПроверьте формат данных"
+    
+    elif text == '/removeslot' and is_admin:
+        response_text = """🗑 Удалить рабочее время:
+
+Формат:
+/removeslot Дата | Мастер
+
+Пример:
+/removeslot 30.12.2024 | Анна
+
+Или удалить все слоты мастера на дату:
+/removeslot 30.12.2024 | Анна"""
+    
+    elif text.startswith('/removeslot ') and is_admin:
+        try:
+            data = text[12:].strip()
+            parts = [p.strip() for p in data.split('|')]
+            
+            if len(parts) < 2:
+                response_text = "❌ Неверный формат. Используйте:\n/removeslot Дата | Мастер"
+            else:
+                date_str = parts[0]
+                master = parts[1]
+                
+                work_date = datetime.strptime(date_str, '%d.%m.%Y').date()
+                
+                cur.execute(
+                    "DELETE FROM work_schedule WHERE master = %s AND work_date = %s",
+                    (master, work_date)
+                )
+                deleted_count = cur.rowcount
+                conn.commit()
+                
+                if deleted_count > 0:
+                    response_text = f"✅ Удалено {deleted_count} рабочих слотов для {master} на {work_date.strftime('%d.%m.%Y')}"
+                else:
+                    response_text = f"⚠️ Рабочие слоты не найдены для {master} на {work_date.strftime('%d.%m.%Y')}"
+                    
+        except Exception as e:
+            response_text = f"❌ Ошибка: {str(e)}\n\nПроверьте формат данных"
+    
     else:
         if is_admin:
             response_text = "❓ Неизвестная команда. Используйте /help для списка команд"
