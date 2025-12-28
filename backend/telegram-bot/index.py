@@ -164,6 +164,179 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'body': json.dumps({'ok': True})
             }
         
+        elif callback_data.startswith('addslot_master_'):
+            master = callback_data.split('_', 2)[2]
+            
+            cur.execute(
+                "UPDATE appointments SET master = %s, message = %s WHERE client_name = %s AND service = 'admin_temp'",
+                (master, f'slot_step2_{chat_id}', f'admin_slot_{chat_id}')
+            )
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            response_text = f"📝 Добавление рабочего времени - Шаг 2 из 4\n\n"
+            response_text += f"👤 Мастер: {master}\n\n"
+            response_text += "Введите дату в формате ДД.ММ.ГГГГ\n\n"
+            response_text += "Например: 30.12.2024\n\n"
+            response_text += "Или диапазон дат через дефис:\n30.12.2024-05.01.2025"
+            
+            edit_message_text(bot_token, chat_id, message_id, response_text)
+            answer_callback_query(bot_token, callback['id'], "✅ Введите дату")
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'ok': True})
+            }
+        
+        elif callback_data.startswith('addclient_master_'):
+            master = callback_data.split('_', 2)[2]
+            
+            cur.execute(
+                "UPDATE appointments SET master = %s, message = %s WHERE client_name = %s AND service = 'admin_temp'",
+                (master, f'add_step4_{chat_id}', f'admin_add_{chat_id}')
+            )
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            cur2 = psycopg2.connect(os.environ['DATABASE_URL']).cursor()
+            cur2.execute("SELECT client_name, client_phone, appointment_date FROM appointments WHERE client_name = %s AND service = 'admin_temp'", (f'admin_add_{chat_id}',))
+            data = cur2.fetchone()
+            cur2.close()
+            
+            client_name = data[0].replace(f'admin_add_{chat_id}_', '')
+            client_phone = data[1]
+            date_str = data[2].strftime('%d.%m.%Y')
+            
+            services = [
+                'Маникюр', 'Педикюр', 'Маникюр + Педикюр',
+                'Наращивание ногтей', 'Покрытие гель-лак',
+                'Снятие покрытия', 'Дизайн ногтей',
+                'Парафинотерапия', 'SPA-уход для рук/ног'
+            ]
+            
+            buttons = []
+            for service in services:
+                buttons.append([{'text': service, 'callback_data': f'addclient_service_{service}'}])
+            
+            keyboard = {'inline_keyboard': buttons}
+            
+            response_text = f"📝 Добавление клиента - Шаг 5 из 6\n\n"
+            response_text += f"👤 {client_name}\n"
+            response_text += f"📞 {client_phone}\n"
+            response_text += f"📅 {date_str}\n"
+            response_text += f"👨‍💼 Мастер: {master}\n\n"
+            response_text += "Выберите услугу:"
+            
+            edit_message_text_with_keyboard(bot_token, chat_id, message_id, response_text, keyboard)
+            answer_callback_query(bot_token, callback['id'], "✅ Выберите услугу")
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'ok': True})
+            }
+        
+        elif callback_data.startswith('addclient_service_'):
+            service = callback_data.split('_', 2)[2]
+            
+            cur.execute(
+                "UPDATE appointments SET client_phone = %s, message = %s WHERE client_name = %s AND service = 'admin_temp'",
+                (service, f'add_step5_{chat_id}', f'admin_add_{chat_id}')
+            )
+            conn.commit()
+            
+            cur.execute("SELECT client_name, appointment_date, master FROM appointments WHERE client_name = %s AND service = 'admin_temp'", (f'admin_add_{chat_id}',))
+            data = cur.fetchone()
+            
+            client_name = data[0].replace(f'admin_add_{chat_id}_', '')
+            date_str = data[1].strftime('%d.%m.%Y')
+            master = data[2]
+            
+            cur.execute(
+                "SELECT appointment_time FROM appointments WHERE appointment_date = %s AND master = %s AND service != 'admin_temp' ORDER BY appointment_time",
+                (data[1], master)
+            )
+            booked = cur.fetchall()
+            
+            work_hours = list(range(8, 22))
+            booked_times = [b[0].hour for b in booked]
+            free_times = [h for h in work_hours if h not in booked_times]
+            
+            buttons = []
+            for hour in free_times:
+                time_str = f"{hour:02d}:00"
+                buttons.append([{'text': f"🕐 {time_str}", 'callback_data': f"addclient_time_{hour:02d}00"}])
+            
+            cur.close()
+            conn.close()
+            
+            keyboard = {'inline_keyboard': buttons}
+            
+            response_text = f"📝 Добавление клиента - Шаг 6 из 6\n\n"
+            response_text += f"👤 {client_name}\n"
+            response_text += f"💅 {service}\n"
+            response_text += f"📅 {date_str}\n"
+            response_text += f"👨‍💼 Мастер: {master}\n\n"
+            response_text += "Выберите время:"
+            
+            edit_message_text_with_keyboard(bot_token, chat_id, message_id, response_text, keyboard)
+            answer_callback_query(bot_token, callback['id'], "✅ Выберите время")
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'ok': True})
+            }
+        
+        elif callback_data.startswith('addclient_time_'):
+            time_str = callback_data.split('_')[2]
+            appointment_time = datetime.strptime(time_str, '%H%M').time()
+            
+            cur.execute("SELECT client_name, client_phone, appointment_date, master FROM appointments WHERE client_name = %s AND service = 'admin_temp'", (f'admin_add_{chat_id}',))
+            data = cur.fetchone()
+            
+            real_client_name = data[0].replace(f'admin_add_{chat_id}_', '')
+            service = data[1]
+            appointment_date = data[2]
+            master = data[3]
+            
+            cur.execute("SELECT message FROM appointments WHERE client_name = %s AND service = 'admin_temp'", (f'admin_add_{chat_id}',))
+            phone = cur.fetchone()[0].replace(f'add_step5_{chat_id}_phone_', '')
+            
+            cur.execute(
+                "DELETE FROM appointments WHERE client_name = %s AND service = 'admin_temp'",
+                (f'admin_add_{chat_id}',)
+            )
+            
+            cur.execute(
+                "INSERT INTO appointments (master, client_name, client_phone, service, appointment_date, appointment_time, message) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                (master, real_client_name, phone, service, appointment_date, appointment_time, f'Добавлено мастером через бот')
+            )
+            apt_id = cur.fetchone()[0]
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            response_text = f"✅ Клиент успешно добавлен!\n\n"
+            response_text += f"ID записи: {apt_id}\n"
+            response_text += f"👤 {real_client_name}\n"
+            response_text += f"📞 {phone}\n"
+            response_text += f"💅 {service}\n"
+            response_text += f"👨‍💼 Мастер: {master}\n"
+            response_text += f"📅 {appointment_date.strftime('%d.%m.%Y')} в {appointment_time.strftime('%H:%M')}"
+            
+            edit_message_text(bot_token, chat_id, message_id, response_text)
+            answer_callback_query(bot_token, callback['id'], "✅ Клиент добавлен!")
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'ok': True})
+            }
+        
         elif callback_data.startswith('service_'):
             service = callback_data.split('_', 1)[1]
             
@@ -386,12 +559,21 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 response_text += f"💅 {apt[4]}\n\n"
     
     elif (text == '/add' or text == '➕ Добавить клиента') and is_admin:
-        response_text = """➕ Чтобы добавить клиента, отправьте сообщение в формате:
-
-/new Имя | Телефон | Услуга | Дата | Время | Мастер
-
-Пример:
-/new Мария Иванова | +79001234567 | Маникюр | 30.12.2024 | 14:00 | Анна"""
+        cur.execute(
+            "DELETE FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'",
+            (f'admin_add_{chat_id}%',)
+        )
+        conn.commit()
+        
+        cur.execute(
+            "INSERT INTO appointments (master, client_name, client_phone, service, appointment_date, appointment_time, message) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            ('', f'admin_add_{chat_id}', '', 'admin_temp', datetime.now().date(), datetime.now().time(), f'add_step1_{chat_id}')
+        )
+        conn.commit()
+        
+        response_text = "📝 Добавление клиента - Шаг 1 из 6\n\n"
+        response_text += "Введите имя клиента:\n\n"
+        response_text += "Например: Мария Иванова"
     
     elif text.startswith('/new ') and is_admin:
         try:
@@ -606,16 +788,31 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 response_text += f"👤 {item[0]}: {item[2].strftime('%H:%M')} - {item[3].strftime('%H:%M')}\n"
     
     elif (text == '/addslot' or text == '➕ Добавить слот') and is_admin:
-        response_text = """➕ Добавить рабочее время:
-
-Формат:
-/addslot Дата | Время начала | Время конца | Мастер
-
-Пример:
-/addslot 30.12.2024 | 09:00 | 18:00 | Анна
-
-Или добавить на всю неделю:
-/addslot 30.12.2024-05.01.2025 | 09:00 | 18:00 | Анна"""
+        cur.execute(
+            "DELETE FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'",
+            (f'admin_slot_{chat_id}%',)
+        )
+        conn.commit()
+        
+        cur.execute(
+            "INSERT INTO appointments (master, client_name, client_phone, service, appointment_date, appointment_time, message) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            ('', f'admin_slot_{chat_id}', '', 'admin_temp', datetime.now().date(), datetime.now().time(), f'slot_step1_{chat_id}')
+        )
+        conn.commit()
+        
+        masters = ['Виктория', 'Алена']
+        buttons = []
+        for master in masters:
+            buttons.append([{'text': f"👤 {master}", 'callback_data': f"addslot_master_{master}"}])
+        
+        keyboard = {'inline_keyboard': buttons}
+        cur.close()
+        conn.close()
+        
+        response_text = "📝 Добавление рабочего времени - Шаг 1 из 4\n\n"
+        response_text += "Выберите мастера:"
+        
+        return send_telegram_message_with_inline_keyboard(bot_token, chat_id, response_text, keyboard)
     
     elif text.startswith('/addslot ') and is_admin:
         try:
@@ -708,14 +905,13 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             response_text = f"❌ Ошибка: {str(e)}\n\nПроверьте формат данных"
     
     else:
-        if not is_admin:
-            cur.execute(
-                "SELECT id, master, appointment_date, appointment_time, message FROM appointments WHERE message LIKE %s AND service = 'temp'",
-                (f'step%_{chat_id}',)
-            )
-            pending = cur.fetchone()
-            
-            if pending:
+        cur.execute(
+            "SELECT id, master, appointment_date, appointment_time, message, client_name, client_phone FROM appointments WHERE (message LIKE %s OR message LIKE %s) AND service IN ('temp', 'admin_temp')",
+            (f'step%_{chat_id}', f'%_step%_{chat_id}')
+        )
+        pending = cur.fetchone()
+        
+        if pending and not is_admin:
                 apt_id = pending[0]
                 master = pending[1]
                 appointment_date = pending[2]
@@ -772,13 +968,198 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 
                 else:
                     response_text = "❓ Неизвестная команда.\n\nДоступные команды:\n💅 Свободные окна\n📋 Мои записи\nℹ️ Помощь"
+        elif pending and is_admin:
+            step_message = pending[4]
+            
+            if step_message.startswith(f'add_step1_{chat_id}'):
+                client_name = text.strip()
+                cur.execute(
+                    "UPDATE appointments SET client_name = %s, message = %s WHERE client_name = %s AND service = 'admin_temp'",
+                    (f'admin_add_{chat_id}_{client_name}', f'add_step2_{chat_id}', f'admin_add_{chat_id}')
+                )
+                conn.commit()
+                
+                response_text = f"📝 Добавление клиента - Шаг 2 из 6\n\n"
+                response_text += f"👤 {client_name}\n\n"
+                response_text += "Введите телефон клиента:\n\n"
+                response_text += "Например: +79001234567"
+            
+            elif step_message.startswith(f'add_step2_{chat_id}'):
+                phone = text.strip()
+                cur.execute(
+                    "UPDATE appointments SET message = %s WHERE client_name LIKE %s AND service = 'admin_temp'",
+                    (f'add_step2_{chat_id}_phone_{phone}', f'admin_add_{chat_id}%')
+                )
+                conn.commit()
+                
+                cur.execute("SELECT client_name FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{chat_id}%',))
+                full_name = cur.fetchone()[0]
+                client_name = full_name.replace(f'admin_add_{chat_id}_', '')
+                
+                response_text = f"📝 Добавление клиента - Шаг 3 из 6\n\n"
+                response_text += f"👤 {client_name}\n"
+                response_text += f"📞 {phone}\n\n"
+                response_text += "Введите дату в формате ДД.ММ.ГГГГ\n\n"
+                response_text += "Например: 30.12.2024"
+            
+            elif step_message.startswith(f'add_step2_{chat_id}_phone_'):
+                try:
+                    date_str = text.strip()
+                    appointment_date = datetime.strptime(date_str, '%d.%m.%Y').date()
+                    
+                    cur.execute(
+                        "UPDATE appointments SET appointment_date = %s, message = %s WHERE client_name LIKE %s AND service = 'admin_temp'",
+                        (appointment_date, f'add_step3_{chat_id}', f'admin_add_{chat_id}%')
+                    )
+                    conn.commit()
+                    
+                    masters = ['Виктория', 'Алена']
+                    buttons = []
+                    for master in masters:
+                        buttons.append([{'text': f"👤 {master}", 'callback_data': f"addclient_master_{master}"}])
+                    
+                    keyboard = {'inline_keyboard': buttons}
+                    cur.close()
+                    conn.close()
+                    
+                    cur2 = psycopg2.connect(os.environ['DATABASE_URL']).cursor()
+                    cur2.execute("SELECT client_name, message FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{chat_id}%',))
+                    data = cur2.fetchone()
+                    cur2.close()
+                    
+                    client_name = data[0].replace(f'admin_add_{chat_id}_', '')
+                    phone = data[1].replace(f'add_step3_{chat_id}', '').replace(f'add_step2_{chat_id}_phone_', '')
+                    
+                    response_text = f"📝 Добавление клиента - Шаг 4 из 6\n\n"
+                    response_text += f"👤 {client_name}\n"
+                    response_text += f"📞 {phone}\n"
+                    response_text += f"📅 {date_str}\n\n"
+                    response_text += "Выберите мастера:"
+                    
+                    return send_telegram_message_with_inline_keyboard(bot_token, chat_id, response_text, keyboard)
+                except:
+                    response_text = "❌ Неверный формат даты. Используйте ДД.ММ.ГГГГ\n\nНапример: 30.12.2024"
+            
+            elif step_message.startswith(f'slot_step2_{chat_id}'):
+                date_input = text.strip()
+                
+                try:
+                    dates_to_add = []
+                    if '-' in date_input:
+                        date_parts = date_input.split('-')
+                        start_date = datetime.strptime(date_parts[0].strip(), '%d.%m.%Y').date()
+                        end_date = datetime.strptime(date_parts[1].strip(), '%d.%m.%Y').date()
+                        current = start_date
+                        while current <= end_date:
+                            dates_to_add.append(current)
+                            current += timedelta(days=1)
+                        date_display = f"{start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')}"
+                    else:
+                        dates_to_add.append(datetime.strptime(date_input, '%d.%m.%Y').date())
+                        date_display = dates_to_add[0].strftime('%d.%m.%Y')
+                    
+                    dates_str = ','.join([d.strftime('%Y-%m-%d') for d in dates_to_add])
+                    
+                    cur.execute(
+                        "UPDATE appointments SET appointment_date = %s, client_phone = %s, message = %s WHERE client_name = %s AND service = 'admin_temp'",
+                        (dates_to_add[0], dates_str, f'slot_step3_{chat_id}', f'admin_slot_{chat_id}')
+                    )
+                    conn.commit()
+                    
+                    cur.execute("SELECT master FROM appointments WHERE client_name = %s AND service = 'admin_temp'", (f'admin_slot_{chat_id}',))
+                    master = cur.fetchone()[0]
+                    
+                    response_text = f"📝 Добавление рабочего времени - Шаг 3 из 4\n\n"
+                    response_text += f"👤 Мастер: {master}\n"
+                    response_text += f"📅 Дата: {date_display}\n\n"
+                    response_text += "Введите время начала работы в формате ЧЧ:ММ\n\n"
+                    response_text += "Например: 09:00"
+                except:
+                    response_text = "❌ Неверный формат даты. Используйте ДД.ММ.ГГГГ или ДД.ММ.ГГГГ-ДД.ММ.ГГГГ\n\nНапример: 30.12.2024 или 30.12.2024-05.01.2025"
+            
+            elif step_message.startswith(f'slot_step3_{chat_id}'):
+                try:
+                    start_time = datetime.strptime(text.strip(), '%H:%M').time()
+                    
+                    cur.execute(
+                        "UPDATE appointments SET appointment_time = %s, message = %s WHERE client_name = %s AND service = 'admin_temp'",
+                        (start_time, f'slot_step4_{chat_id}', f'admin_slot_{chat_id}')
+                    )
+                    conn.commit()
+                    
+                    cur.execute("SELECT master, appointment_date, client_phone FROM appointments WHERE client_name = %s AND service = 'admin_temp'", (f'admin_slot_{chat_id}',))
+                    data = cur.fetchone()
+                    master = data[0]
+                    dates_str = data[2]
+                    
+                    dates_list = [datetime.strptime(d, '%Y-%m-%d').date() for d in dates_str.split(',')]
+                    if len(dates_list) > 1:
+                        date_display = f"{dates_list[0].strftime('%d.%m.%Y')} - {dates_list[-1].strftime('%d.%m.%Y')}"
+                    else:
+                        date_display = dates_list[0].strftime('%d.%m.%Y')
+                    
+                    response_text = f"📝 Добавление рабочего времени - Шаг 4 из 4\n\n"
+                    response_text += f"👤 Мастер: {master}\n"
+                    response_text += f"📅 Дата: {date_display}\n"
+                    response_text += f"⏰ Начало: {start_time.strftime('%H:%M')}\n\n"
+                    response_text += "Введите время окончания работы в формате ЧЧ:ММ\n\n"
+                    response_text += "Например: 18:00"
+                except:
+                    response_text = "❌ Неверный формат времени. Используйте ЧЧ:ММ\n\nНапример: 09:00"
+            
+            elif step_message.startswith(f'slot_step4_{chat_id}'):
+                try:
+                    end_time = datetime.strptime(text.strip(), '%H:%M').time()
+                    
+                    cur.execute("SELECT master, appointment_time, client_phone FROM appointments WHERE client_name = %s AND service = 'admin_temp'", (f'admin_slot_{chat_id}',))
+                    data = cur.fetchone()
+                    master = data[0]
+                    start_time = data[1]
+                    dates_str = data[2]
+                    
+                    dates_list = [datetime.strptime(d, '%Y-%m-%d').date() for d in dates_str.split(',')]
+                    
+                    added_count = 0
+                    for work_date in dates_list:
+                        try:
+                            cur.execute(
+                                "INSERT INTO work_schedule (master, work_date, start_time, end_time) VALUES (%s, %s, %s, %s)",
+                                (master, work_date, start_time, end_time)
+                            )
+                            added_count += 1
+                        except:
+                            pass
+                    
+                    cur.execute(
+                        "DELETE FROM appointments WHERE client_name = %s AND service = 'admin_temp'",
+                        (f'admin_slot_{chat_id}',)
+                    )
+                    
+                    conn.commit()
+                    
+                    if added_count > 0:
+                        if len(dates_list) > 1:
+                            date_display = f"{dates_list[0].strftime('%d.%m.%Y')} - {dates_list[-1].strftime('%d.%m.%Y')}"
+                        else:
+                            date_display = dates_list[0].strftime('%d.%m.%Y')
+                        
+                        response_text = f"✅ Рабочее время добавлено!\n\n"
+                        response_text += f"👤 Мастер: {master}\n"
+                        response_text += f"📅 Дата: {date_display}\n"
+                        response_text += f"⏰ {start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')}\n"
+                        response_text += f"Добавлено дней: {added_count}"
+                    else:
+                        response_text = "⚠️ Эти слоты уже существуют в графике"
+                except:
+                    response_text = "❌ Неверный формат времени. Используйте ЧЧ:ММ\n\nНапример: 18:00"
+            
             else:
-                response_text = "❓ Неизвестная команда.\n\nДоступные команды:\n💅 Свободные окна\n📋 Мои записи\nℹ️ Помощь"
-        else:
-            if is_admin:
                 response_text = "❓ Неизвестная команда. Используйте /help для списка команд"
-            else:
+        else:
+            if not is_admin:
                 response_text = "❓ Неизвестная команда.\n\nДоступные команды:\n💅 Свободные окна\n📋 Мои записи\nℹ️ Помощь"
+            else:
+                response_text = "❓ Неизвестная команда. Используйте /help для списка команд"
     
     cur.close()
     conn.close()
