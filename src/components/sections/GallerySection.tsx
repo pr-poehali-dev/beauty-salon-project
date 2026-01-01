@@ -1,6 +1,26 @@
 const GallerySection = () => {
   const photos = [
     {
+      url: "https://cdn.poehali.dev/files/photo_2026-01-01_18-18-54.jpg",
+      alt: "Французский маникюр с белыми кончиками"
+    },
+    {
+      url: "https://cdn.poehali.dev/files/photo_2026-01-01_18-19-04.jpg",
+      alt: "Элегантный френч с удлинением"
+    },
+    {
+      url: "https://cdn.poehali.dev/files/photo_2026-01-01_18-19-10.jpg",
+      alt: "Нежный маникюр с акцентом"
+    },
+    {
+      url: "https://cdn.poehali.dev/files/photo_2026-01-01_18-19-29.jpg",
+      alt: "Японский маникюр с глянцевым блеском"
+    },
+    {
+      url: "https://cdn.poehali.dev/files/photo_2026-01-01_18-21-03.jpg",
+      alt: "Перламутровое покрытие с мерцанием"
+    },
+    {
       url: "https://cdn.poehali.dev/files/photo_2025-12-27_13-32-52.jpg",
       alt: "Красный глиттерный маникюр"
     },
@@ -11,10 +31,6 @@ const GallerySection = () => {
     {
       url: "https://cdn.poehali.dev/files/photo_2025-12-27_13-32-49.jpg",
       alt: "Профессиональный маникюр с красным глиттером"
-    },
-    {
-      url: "https://cdn.poehali.dev/files/photo_2025-12-27_13-32-46.jpg",
-      alt: "Нежный персиковый маникюр с блестками"
     }
   ];
 
