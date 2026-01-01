@@ -5,6 +5,44 @@ import psycopg2
 from datetime import datetime, timedelta
 import calendar
 
+def get_services():
+    """Получить список услуг с ценами"""
+    return {
+        'Шугаринг': [
+            'Тотальное бикини - 1500₽',
+            'Классическое бикини - 1000₽',
+            'Ноги полностью - 1800₽',
+            'Руки полностью - 1000₽',
+            'Подмышки - 500₽',
+            'Ягодицы - 700₽',
+            'Депиляция лица - 250₽',
+            'Голень - 900₽',
+            'Бедра - 1000₽',
+            'Руки до локтя - 900₽',
+            'Спина полностью - 1300₽',
+            'Поясница - 600₽'
+        ],
+        'Ногти': [
+            'Снятие, маникюр, покрытие гель-лак - 2200₽',
+            'Маникюр - 900₽',
+            'Японский маникюр - 1100₽',
+            'Снятие гель-лака - 500₽',
+            'Маникюр + покрытие гель-лак - 1800₽',
+            'Мужской маникюр - 1000₽',
+            'Снятие, маникюр, покрытие гелем (свыше 0.5мм) - 2500₽',
+            'Детский маникюр - 600₽',
+            'Маникюр + покрытие гелем (свыше 0.5мм) - 2300₽',
+            'Наращивание ногтей + маникюр - 2500₽',
+            'Комплекс (снятие, маникюр, наращивание, покрытие, дизайн) - 4000₽',
+            'Ремонт ногтя - 150₽',
+            'Укрепление ногтей - 1000₽',
+            'Коррекция нарощенных ногтей - 2000₽',
+            'Снятие нарощенных ногтей - 500₽',
+            'Дизайн - 500₽',
+            'Френч - 500₽'
+        ]
+    }
+
 def generate_calendar(year, month, prefix='cal'):
     """Генерация inline-календаря для выбора даты"""
     keyboard = []
@@ -360,16 +398,13 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             client_name = data[0].replace(f'admin_add_{chat_id}_', '')
             date_str = data[1].strftime('%d.%m.%Y')
             
-            services = [
-                'Маникюр', 'Педикюр', 'Маникюр + Педикюр',
-                'Наращивание ногтей', 'Покрытие гель-лак',
-                'Снятие покрытия', 'Дизайн ногтей',
-                'Парафинотерапия', 'SPA-уход для рук/ног'
-            ]
+            services = get_services()
             
             buttons = []
-            for service in services:
-                buttons.append([{'text': service, 'callback_data': f'addclient_service_{service}'}])
+            for category, items in services.items():
+                buttons.append([{'text': f'📂 {category}', 'callback_data': f'category_{category}'}])
+            
+            buttons.append([{'text': '◀️ Назад', 'callback_data': 'addclient_back_to_master'}])
             
             keyboard = {'inline_keyboard': buttons}
             
@@ -378,10 +413,92 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             response_text += f"📞 {phone}\n"
             response_text += f"📅 {date_str}\n"
             response_text += f"👨‍💼 Мастер: {master}\n\n"
-            response_text += "Выберите услугу:"
+            response_text += "Выберите категорию услуг:"
             
             edit_message_text_with_keyboard(bot_token, chat_id, message_id, response_text, keyboard)
             answer_callback_query(bot_token, callback['id'], "✅ Выберите услугу")
+            
+            cur.close()
+            conn.close()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'ok': True})
+            }
+        
+        elif callback_data.startswith('category_'):
+            category = callback_data.split('_', 1)[1]
+            
+            services = get_services()
+            
+            buttons = []
+            for service in services[category]:
+                buttons.append([{'text': service, 'callback_data': f'addclient_service_{service.split(" - ")[0]}'}])
+            
+            buttons.append([{'text': '◀️ Назад к категориям', 'callback_data': 'back_to_categories'}])
+            
+            keyboard = {'inline_keyboard': buttons}
+            
+            cur.execute("SELECT client_name, appointment_date, master FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{chat_id}%',))
+            data = cur.fetchone()
+            
+            client_name = data[0].replace(f'admin_add_{chat_id}_', '')
+            date_str = data[1].strftime('%d.%m.%Y')
+            master = data[2]
+            
+            cur.execute("SELECT message FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{chat_id}%',))
+            phone = cur.fetchone()[0].replace(f'add_step4_{chat_id}_phone_', '')
+            
+            response_text = f"📝 Добавление клиента - {category}\n\n"
+            response_text += f"👤 {client_name}\n"
+            response_text += f"📞 {phone}\n"
+            response_text += f"📅 {date_str}\n"
+            response_text += f"👨‍💼 Мастер: {master}\n\n"
+            response_text += f"Выберите услугу из категории {category}:"
+            
+            edit_message_text_with_keyboard(bot_token, chat_id, message_id, response_text, keyboard)
+            answer_callback_query(bot_token, callback['id'], f"✅ Категория {category}")
+            
+            cur.close()
+            conn.close()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'ok': True})
+            }
+        
+        elif callback_data == 'back_to_categories':
+            services = get_services()
+            
+            buttons = []
+            for category, items in services.items():
+                buttons.append([{'text': f'📂 {category}', 'callback_data': f'category_{category}'}])
+            
+            buttons.append([{'text': '◀️ Назад', 'callback_data': 'addclient_back_to_master'}])
+            
+            keyboard = {'inline_keyboard': buttons}
+            
+            cur.execute("SELECT client_name, appointment_date, master FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{chat_id}%',))
+            data = cur.fetchone()
+            
+            client_name = data[0].replace(f'admin_add_{chat_id}_', '')
+            date_str = data[1].strftime('%d.%m.%Y')
+            master = data[2]
+            
+            cur.execute("SELECT message FROM appointments WHERE client_name LIKE %s AND service = 'admin_temp'", (f'admin_add_{chat_id}%',))
+            phone = cur.fetchone()[0].replace(f'add_step4_{chat_id}_phone_', '')
+            
+            response_text = f"📝 Добавление клиента - Шаг 5 из 6\n\n"
+            response_text += f"👤 {client_name}\n"
+            response_text += f"📞 {phone}\n"
+            response_text += f"📅 {date_str}\n"
+            response_text += f"👨‍💼 Мастер: {master}\n\n"
+            response_text += "Выберите категорию услуг:"
+            
+            edit_message_text_with_keyboard(bot_token, chat_id, message_id, response_text, keyboard)
+            answer_callback_query(bot_token, callback['id'], "✅ Выберите категорию")
             
             cur.close()
             conn.close()
@@ -485,6 +602,91 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             edit_message_text(bot_token, chat_id, message_id, response_text)
             answer_callback_query(bot_token, callback['id'], "✅ Клиент добавлен!")
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'ok': True})
+            }
+        
+        elif callback_data.startswith('user_category_'):
+            category = callback_data.split('_', 2)[2]
+            
+            services = get_services()
+            
+            buttons = []
+            for service in services[category]:
+                buttons.append([{'text': service, 'callback_data': f'service_{service.split(" - ")[0]}'}])
+            
+            buttons.append([{'text': '◀️ Назад к категориям', 'callback_data': 'user_back_to_categories'}])
+            
+            keyboard = {'inline_keyboard': buttons}
+            
+            cur.execute(
+                "SELECT id, master, appointment_date, appointment_time, client_name, client_phone FROM appointments WHERE message LIKE %s AND service = 'temp'",
+                (f'step3_{chat_id}%',)
+            )
+            pending = cur.fetchone()
+            
+            if pending:
+                apt_id = pending[0]
+                master = pending[1]
+                appointment_date = pending[2]
+                appointment_time = pending[3]
+                client_name = pending[4]
+                client_phone = pending[5]
+                
+                response_text = f"📝 Шаг 3 из 3: {category}\n\n"
+                response_text += f"👤 {client_name}\n"
+                response_text += f"📞 {client_phone}\n"
+                response_text += f"📅 {master}, {appointment_date.strftime('%d.%m.%Y')} в {appointment_time.strftime('%H:%M')}\n\n"
+                response_text += f"Выберите услугу из категории {category}:"
+                
+                edit_message_text_with_keyboard(bot_token, chat_id, message_id, response_text, keyboard)
+                answer_callback_query(bot_token, callback['id'], f"✅ Категория {category}")
+            
+            cur.close()
+            conn.close()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'ok': True})
+            }
+        
+        elif callback_data == 'user_back_to_categories':
+            services = get_services()
+            
+            buttons = []
+            for category, items in services.items():
+                buttons.append([{'text': f'📂 {category}', 'callback_data': f'user_category_{category}'}])
+            
+            keyboard = {'inline_keyboard': buttons}
+            
+            cur.execute(
+                "SELECT id, master, appointment_date, appointment_time, client_name, client_phone FROM appointments WHERE message LIKE %s AND service = 'temp'",
+                (f'step3_{chat_id}%',)
+            )
+            pending = cur.fetchone()
+            
+            if pending:
+                apt_id = pending[0]
+                master = pending[1]
+                appointment_date = pending[2]
+                appointment_time = pending[3]
+                client_name = pending[4]
+                client_phone = pending[5]
+                
+                response_text = f"📝 Шаг 3 из 3: Выберите категорию услуг\n\n"
+                response_text += f"👤 {client_name}\n"
+                response_text += f"📞 {client_phone}\n"
+                response_text += f"📅 {master}, {appointment_date.strftime('%d.%m.%Y')} в {appointment_time.strftime('%H:%M')}"
+                
+                edit_message_text_with_keyboard(bot_token, chat_id, message_id, response_text, keyboard)
+                answer_callback_query(bot_token, callback['id'], "✅ Выберите категорию")
+            
+            cur.close()
+            conn.close()
             
             return {
                 'statusCode': 200,
@@ -1099,22 +1301,51 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     cur.execute("SELECT client_name FROM appointments WHERE id = %s", (apt_id,))
                     client_name = cur.fetchone()[0]
                     
-                    services = [
-                        'Маникюр', 'Педикюр', 'Маникюр + Педикюр',
-                        'Наращивание ногтей', 'Покрытие гель-лак',
-                        'Снятие покрытия', 'Дизайн ногтей',
-                        'Парафинотерапия', 'SPA-уход для рук/ног'
-                    ]
+                    services = {
+                        'Шугаринг': [
+                            'Тотальное бикини - 1500₽',
+                            'Классическое бикини - 1000₽',
+                            'Ноги полностью - 1800₽',
+                            'Руки полностью - 1000₽',
+                            'Подмышки - 500₽',
+                            'Ягодицы - 700₽',
+                            'Депиляция лица - 250₽',
+                            'Голень - 900₽',
+                            'Бедра - 1000₽',
+                            'Руки до локтя - 900₽',
+                            'Спина полностью - 1300₽',
+                            'Поясница - 600₽'
+                        ],
+                        'Ногти': [
+                            'Снятие, маникюр, покрытие гель-лак - 2200₽',
+                            'Маникюр - 900₽',
+                            'Японский маникюр - 1100₽',
+                            'Снятие гель-лака - 500₽',
+                            'Маникюр + покрытие гель-лак - 1800₽',
+                            'Мужской маникюр - 1000₽',
+                            'Снятие, маникюр, покрытие гелем (свыше 0.5мм) - 2500₽',
+                            'Детский маникюр - 600₽',
+                            'Маникюр + покрытие гелем (свыше 0.5мм) - 2300₽',
+                            'Наращивание ногтей + маникюр - 2500₽',
+                            'Комплекс (снятие, маникюр, наращивание, покрытие, дизайн) - 4000₽',
+                            'Ремонт ногтя - 150₽',
+                            'Укрепление ногтей - 1000₽',
+                            'Коррекция нарощенных ногтей - 2000₽',
+                            'Снятие нарощенных ногтей - 500₽',
+                            'Дизайн - 500₽',
+                            'Френч - 500₽'
+                        ]
+                    }
                     
                     buttons = []
-                    for service in services:
-                        buttons.append([{'text': service, 'callback_data': f'service_{service}'}])
+                    for category, items in services.items():
+                        buttons.append([{'text': f'📂 {category}', 'callback_data': f'user_category_{category}'}])
                     
                     keyboard = {'inline_keyboard': buttons}
                     cur.close()
                     conn.close()
                     
-                    response_text = f"📝 Шаг 3 из 3: Выберите услугу\n\n"
+                    response_text = f"📝 Шаг 3 из 3: Выберите категорию услуг\n\n"
                     response_text += f"👤 {client_name}\n"
                     response_text += f"📞 {client_phone}\n"
                     response_text += f"📅 {master}, {appointment_date.strftime('%d.%m.%Y')} в {appointment_time.strftime('%H:%M')}"
