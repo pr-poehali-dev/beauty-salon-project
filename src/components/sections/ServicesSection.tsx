@@ -12,102 +12,84 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
+
   const victoriaServices = [
     {
       category: "Маникюр",
       items: [
-        { name: "Аппаратный маникюр", price: "500 ₽" },
-        { name: "Выравнивание ногтевой пластины", price: "500 ₽" },
-        { name: "Покрытие с градиентом (омбре)", price: "1000 ₽" },
-        { name: "Детский маникюр", price: "500 ₽" },
-        { name: "Дизайн ногтей", price: "500 ₽" }
+        { name: "Маникюр", price: "900 ₽", duration: 40 },
+        { name: "Японский маникюр", price: "1100 ₽", duration: 60 },
+        { name: "Мужской маникюр", price: "1000 ₽", duration: 40 },
+        { name: "Детский маникюр", price: "600 ₽", duration: 35 }
       ]
     },
     {
-      category: "Наращивание и коррекция",
+      category: "Покрытие гель-лаком",
       items: [
-        { name: "Коррекция наращённых ногтей", price: "1800 ₽" },
-        { name: "Мужской маникюр", price: "1000 ₽" },
-        { name: "Маникюр с покрытием гель-лаком", price: "1000 ₽" },
-        { name: "Наращивание ногтей", price: "1900 ₽" }
+        { name: "Снятие гель лака", price: "500 ₽", duration: 30 },
+        { name: "Маникюр + покрытие гель лак", price: "1800 ₽", duration: 80 },
+        { name: "Снятие, маникюр, покрытие гель лак", price: "2200 ₽", duration: 150 },
+        { name: "Дизайн не сложный", price: "500 ₽", duration: 30 },
+        { name: "Френч", price: "500 ₽", duration: 30 }
       ]
     },
     {
-      category: "Покрытие ногтей",
+      category: "Наращивание и гель",
       items: [
-        { name: "Покрытие ногтей на руках гель-лаком", price: "500 ₽" },
-        { name: "Покрытие ногтей на руках биогелем", price: "500 ₽" },
-        { name: "Ремонт ногтя", price: "180 ₽" }
+        { name: "Маникюр + покрытие гелем (свыше 0,5 мм)", price: "2300 ₽", duration: 100 },
+        { name: "Снятие, маникюр, покрытие гелем (свыше 0,5 мм)", price: "2500 ₽", duration: 150 },
+        { name: "Наращивание ногтей + маникюр", price: "2500 ₽", duration: 180 },
+        { name: "Комплекс (снятие, маникюр, наращивание, покрытие, дизайн)", price: "4000 ₽", duration: 210 },
+        { name: "Коррекция нарощенных ногтей", price: "2000 ₽", duration: 120 },
+        { name: "Снятие нарощенных ногтей", price: "500 ₽", duration: 30 }
       ]
     },
     {
-      category: "Снятие покрытия",
+      category: "Укрепление и ремонт",
       items: [
-        { name: "Снятие биогеля", price: "500 ₽" },
-        { name: "Снятие гель-лака с ногтей на руках", price: "500 ₽" },
-        { name: "Снятие наращённых ногтей", price: "1000 ₽" }
-      ]
-    },
-    {
-      category: "Специальные процедуры",
-      items: [
-        { name: "Укрепление ногтей", price: "800 ₽" },
-        { name: "Японский маникюр", price: "800 ₽" }
+        { name: "Укрепление ногтей (гелем, акрилом)", price: "1000 ₽", duration: 30 },
+        { name: "Ремонт ногтя", price: "150 ₽", duration: 30 }
       ]
     }
   ];
 
   const alenaServices = [
     {
-      category: "LPG массаж",
+      category: "Шугаринг",
       items: [
-        { name: "30 минут", price: "1500 ₽" },
-        { name: "40 минут", price: "1900 ₽" },
-        { name: "60 минут", price: "2750 ₽" }
-      ]
-    },
-    {
-      category: "Ручной расслабляющий",
-      items: [
-        { name: "1 час", price: "3300 ₽" },
-        { name: "1,5 часа", price: "4400 ₽" }
-      ]
-    },
-    {
-      category: "Вибро массаж",
-      items: [
-        { name: "20 минут", price: "1200 ₽" },
-        { name: "30 минут", price: "1500 ₽" },
-        { name: "40 минут", price: "1800 ₽" }
-      ]
-    },
-    {
-      category: "Массаж ручной лица",
-      items: [
-        { name: "30 минут", price: "1900 ₽" },
-        { name: "45 минут", price: "2400 ₽" },
-        { name: "60 минут", price: "2900 ₽" }
+        { name: "Тотальное бикини", price: "1500 ₽", duration: 40 },
+        { name: "Классическое бикини", price: "1000 ₽", duration: 20 },
+        { name: "Ноги полностью", price: "1800 ₽", duration: 30 },
+        { name: "Голень", price: "900 ₽", duration: 20 },
+        { name: "Бедра", price: "1000 ₽", duration: 20 },
+        { name: "Руки полностью", price: "1000 ₽", duration: 30 },
+        { name: "Руки до локтя", price: "900 ₽", duration: 20 },
+        { name: "Подмышки", price: "500 ₽", duration: 15 },
+        { name: "Ягодицы", price: "700 ₽", duration: 20 },
+        { name: "Спина полностью", price: "1300 ₽", duration: 30 },
+        { name: "Поясница", price: "600 ₽", duration: 20 },
+        { name: "Депиляция (любая зона на лице)", price: "250 ₽", duration: 15 }
       ]
     },
     {
       category: "Чистка лица",
       items: [
-        { name: "УЗ чистка", price: "1800 ₽" },
-        { name: "Комбинированная", price: "от 2500 ₽" }
+        { name: "УЗ чистка", price: "1800 ₽", duration: 60 },
+        { name: "Комбинированная", price: "от 2500 ₽", duration: 120 }
       ]
     },
     {
       category: "Кислотные пилинги",
       items: [
-        { name: "Высокомолекулярные", price: "от 1800 ₽" },
-        { name: "Серединные", price: "от 2500 ₽" },
-        { name: "PRX 33", price: "от 4000 ₽" }
+        { name: "Высокомолекулярные", price: "от 1800 ₽", duration: 60 },
+        { name: "Серединные", price: "от 2500 ₽", duration: 60 },
+        { name: "PRX 33", price: "от 4000 ₽", duration: 60 }
       ]
     },
     {
       category: "Уходовые процедуры по лицу",
       items: [
-        { name: "Уходовые процедуры", price: "от 1500 ₽" }
+        { name: "Уходовые процедуры", price: "от 1500 ₽", duration: 60 }
       ]
     }
   ];
@@ -120,10 +102,11 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
             <p className="text-accent text-sm tracking-widest mb-4">НАШИ УСЛУГИ</p>
             <h2 className="text-5xl font-light">Спектр возможностей</h2>
           </div>
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-3 gap-8">
             {[
-              { icon: "Sparkles", title: "Ногтевой сервис", desc: "Маникюр, педикюр, наращивание", target: "ногтевой-сервис" },
-              { icon: "Waves", title: "Массаж и уход за лицом", desc: "LPG, ручной массаж, чистка лица", target: "массаж" }
+              { icon: "Sparkles", title: "Ногтевой сервис", desc: "Маникюр, покрытие, наращивание", target: "ногтевой-сервис" },
+              { icon: "Waves", title: "Шугаринг", desc: "Все зоны депиляции", target: "шугаринг" },
+              { icon: "Heart", title: "Уход за лицом", desc: "Чистки, пилинги, уходовые процедуры", target: "лицо" }
             ].map((service, idx) => (
               <Card 
                 key={idx} 
@@ -164,7 +147,10 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
                     <div className="space-y-4">
                       {category.items.map((item, itemIdx) => (
                         <div key={itemIdx} className="flex justify-between items-start gap-4">
-                          <span className="text-white">{item.name}</span>
+                          <div>
+                            <span className="text-white block">{item.name}</span>
+                            <span className="text-gray-400 text-sm">{item.duration} мин</span>
+                          </div>
                           <span className="text-accent font-medium whitespace-nowrap">{item.price}</span>
                         </div>
                       ))}
@@ -175,17 +161,36 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
             </div>
           </div>
 
-          <div id="массаж">
+          <div className="mb-16" id="шугаринг">
             <h3 className="text-4xl font-bold text-center mb-8 pb-4 border-b-2 border-accent/30 max-w-4xl mx-auto text-white">
-              Алёна — Массаж и уход за лицом
+              Алёна — Шугаринг
+            </h3>
+            <div className="max-w-4xl mx-auto">
+              <Card className="border border-gray-700 shadow-md bg-zinc-900">
+                <CardContent className="p-8">
+                  <div className="grid md:grid-cols-2 gap-x-12 gap-y-4">
+                    {alenaServices[0].items.map((item, itemIdx) => (
+                      <div key={itemIdx} className="flex justify-between items-start gap-4">
+                        <div>
+                          <span className="text-white block">{item.name}</span>
+                          <span className="text-gray-400 text-sm">{item.duration} мин</span>
+                        </div>
+                        <span className="text-accent font-medium whitespace-nowrap">{item.price}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          <div id="лицо">
+            <h3 className="text-4xl font-bold text-center mb-8 pb-4 border-b-2 border-accent/30 max-w-4xl mx-auto text-white">
+              Алёна — Уход за лицом
             </h3>
             <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-              {alenaServices.map((category, idx) => (
-                <Card 
-                  key={idx} 
-                  className="border border-gray-200 shadow-md bg-black"
-                  id={category.category === "Массаж ручной лица" || category.category === "Чистка лица" || category.category === "Кислотные пилинги" || category.category === "Уходовые процедуры по лицу" ? "лицо" : undefined}
-                >
+              {alenaServices.slice(1).map((category, idx) => (
+                <Card key={idx} className="border border-gray-700 shadow-md bg-zinc-900">
                   <CardContent className="p-8">
                     <h4 className="text-2xl font-light mb-6 pb-4 border-b border-accent/30 text-white">
                       {category.category}
@@ -193,7 +198,10 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
                     <div className="space-y-4">
                       {category.items.map((item, itemIdx) => (
                         <div key={itemIdx} className="flex justify-between items-start gap-4">
-                          <span className="text-white">{item.name}</span>
+                          <div>
+                            <span className="text-white block">{item.name}</span>
+                            <span className="text-gray-400 text-sm">{item.duration} мин</span>
+                          </div>
                           <span className="text-accent font-medium whitespace-nowrap">{item.price}</span>
                         </div>
                       ))}
