@@ -58,8 +58,13 @@ def handle_callback(callback: dict) -> dict:
     chat_id = callback['message']['chat']['id']
     message_id = callback['message']['message_id']
     data = callback['data']
+    callback_id = callback['id']
     
-    if data.startswith('master_'):
+    answer_callback(callback_id)
+    
+    if data == 'noop':
+        return response(200, {'ok': True})
+    elif data.startswith('master_'):
         master_id = int(data.split('_')[1])
         return send_services_list(chat_id, message_id, master_id)
     elif data.startswith('service_'):
@@ -326,6 +331,23 @@ def edit_message(chat_id: int, message_id: int, text: str, keyboard=None) -> Non
     
     req = urllib.request.Request(url, urllib.parse.urlencode(data).encode(), method='POST')
     urllib.request.urlopen(req)
+
+
+def answer_callback(callback_id: str) -> None:
+    """Ответ на callback query"""
+    import urllib.request
+    import urllib.parse
+    
+    token = os.environ.get('TELEGRAM_BOT_TOKEN')
+    url = f'https://api.telegram.org/bot{token}/answerCallbackQuery'
+    
+    data = {'callback_query_id': callback_id}
+    
+    try:
+        req = urllib.request.Request(url, urllib.parse.urlencode(data).encode(), method='POST')
+        urllib.request.urlopen(req)
+    except:
+        pass
 
 
 def get_db():
