@@ -143,7 +143,7 @@ def send_services_list(chat_id: int, message_id: int, master_id: int) -> dict:
             current_category = service['category']
             keyboard['inline_keyboard'].append([{'text': f"📌 {current_category}", 'callback_data': 'noop'}])
         
-        text = f"{service['name']} — {service['price']} ({service['duration']} мин)"
+        text = f"{service['name']} — {service['price']}"
         keyboard['inline_keyboard'].append([{'text': text, 'callback_data': f"service_{service['id']}"}])
     
     edit_message(chat_id, message_id, "Выберите услугу:", keyboard)
@@ -154,11 +154,14 @@ def send_date_selection(chat_id: int, message_id: int, service_id: int) -> dict:
     """Календарь для выбора даты"""
     keyboard = {'inline_keyboard': []}
     
+    weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+    
     today = datetime.now()
     for i in range(14):
         date = today + timedelta(days=i)
         date_str = date.strftime('%Y-%m-%d')
-        display = date.strftime('%d.%m %A')
+        weekday = weekdays[date.weekday()]
+        display = date.strftime(f'%d.%m ({weekday})')
         keyboard['inline_keyboard'].append([{'text': display, 'callback_data': f"date_{service_id}_{date_str}"}])
     
     edit_message(chat_id, message_id, "Выберите дату:", keyboard)
@@ -263,8 +266,7 @@ def confirm_booking(chat_id: int, message_id: int, service_id: int, date: str, t
 Услуга: {service['name']}
 Цена: {service['price']}
 Дата: {date}
-Время: {time} - {end_time}
-Длительность: {service['duration']} мин
+Время: {time}
 
 Номер записи: #{booking_id}
 
