@@ -246,80 +246,90 @@ def send_date_selection(chat_id: int, message_id: int, service_id: int) -> dict:
 def send_time_selection(chat_id: int, message_id: int, service_id: int, date: str) -> dict:
     """Доступное время с учётом длительности процедур и блокировок"""
     print(f"[DEBUG] send_time_selection called: service_id={service_id}, date={date}")
-    conn = get_db()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    cur.execute("SELECT master_id, duration FROM t_p5914469_beauty_salon_project.services WHERE id = %s", (service_id,))
-    service = cur.fetchone()
-    master_id = service['master_id']
-    service_duration = service['duration']
-    
-    # Получаем все записи на эту дату
-    cur.execute("""
-        SELECT booking_time, duration 
-        FROM t_p5914469_beauty_salon_project.bookings 
-        WHERE master_id = %s AND booking_date = %s AND status != 'cancelled'
-        ORDER BY booking_time
-    """, (master_id, date))
-    bookings = cur.fetchall()
-    
-    # Получаем блокировки времени
-    cur.execute("""
-        SELECT block_start, block_end
-        FROM t_p5914469_beauty_salon_project.master_blocks
-        WHERE master_id = %s AND block_date = %s
-        ORDER BY block_start
-    """, (master_id, date))
-    blocks = cur.fetchall()
-    
-    cur.close()
-    conn.close()
-    
-    # Собираем все занятые слоты
-    occupied_slots = []
-    
-    for booking in bookings:
-        start = datetime.strptime(str(booking['booking_time']), '%H:%M:%S')
-        duration = booking['duration']
-        end = start + timedelta(minutes=duration)
-        occupied_slots.append((start, end))
-    
-    for block in blocks:
-        start = datetime.strptime(str(block['block_start']), '%H:%M:%S')
-        end = datetime.strptime(str(block['block_end']), '%H:%M:%S')
-        occupied_slots.append((start, end))
-    
-    def is_time_available(start_time: datetime, duration: int) -> bool:
-        end_time = start_time + timedelta(minutes=duration)
-        for occ_start, occ_end in occupied_slots:
-            if not (end_time <= occ_start or start_time >= occ_end):
-                return False
-        return True
-    
-    keyboard = {'inline_keyboard': []}
-    work_start = datetime.strptime(f"{date} 09:00", '%Y-%m-%d %H:%M')
-    work_end = datetime.strptime(f"{date} 20:00", '%Y-%m-%d %H:%M')
-    
-    current = work_start
-    row = []
-    while current < work_end:
-        if is_time_available(current, service_duration):
-            time_str = current.strftime('%H:%M')
-            row.append({'text': time_str, 'callback_data': f"time_{service_id}_{date}_{time_str}"})
-            if len(row) == 3:
-                keyboard['inline_keyboard'].append(row)
-                row = []
-        current += timedelta(minutes=30)
-    
-    if row:
-        keyboard['inline_keyboard'].append(row)
-    
-    if not keyboard['inline_keyboard']:
-        edit_message(chat_id, message_id, f"❌ К сожалению, на {date} нет свободного времени")
-    else:
-        edit_message(chat_id, message_id, f"Выберите время на {date}:", keyboard)
-    
-    return response(200, {'ok': True})
+    try:
+        conn = get_db()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute("SELECT master_id, duration FROM t_p5914469_beauty_salon_project.services WHERE id = %s", (service_id,))
+        service = cur.fetchone()
+        print(f"[DEBUG] Service fetched: {service}")
+        master_id = service['master_id']
+        service_duration = service['duration']
+        
+        # Получаем все записи на эту дату
+        cur.execute("""
+            SELECT booking_time, duration 
+            FROM t_p5914469_beauty_salon_project.bookings 
+            WHERE master_id = %s AND booking_date = %s AND status != 'cancelled'
+            ORDER BY booking_time
+        """, (master_id, date))
+        bookings = cur.fetchall()
+        
+        # Получаем блокировки времени
+        cur.execute("""
+            SELECT block_start, block_end
+            FROM t_p5914469_beauty_salon_project.master_blocks
+            WHERE master_id = %s AND block_date = %s
+            ORDER BY block_start
+        """, (master_id, date))
+        blocks = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        # Собираем все занятые слоты
+        occupied_slots = []
+        
+        for booking in bookings:
+            start = datetime.strptime(str(booking['booking_time']), '%H:%M:%S')
+            duration = booking['duration']
+            end = start + timedelta(minutes=duration)
+            occupied_slots.append((start, end))
+        
+        for block in blocks:
+            start = datetime.strptime(str(block['block_start']), '%H:%M:%S')
+            end = datetime.strptime(str(block['block_end']), '%H:%M:%S')
+            occupied_slots.append((start, end))
+        
+        def is_time_available(start_time: datetime, duration: int) -> bool:
+            end_time = start_time + timedelta(minutes=duration)
+            for occ_start, occ_end in occupied_slots:
+                if not (end_time <= occ_start or start_time >= occ_end):
+                    return False
+            return True
+        
+        keyboard = {'inline_keyboard': []}
+        
+        # Создаём datetime объекты для начала и конца рабочего дня
+        work_start = datetime.strptime("09:00", '%H:%M')
+        work_end = datetime.strptime("20:00", '%H:%M')
+        
+        current = work_start
+        row = []
+        while current < work_end:
+            if is_time_available(current, service_duration):
+                time_str = current.strftime('%H:%M')
+                row.append({'text': time_str, 'callback_data': f"time_{service_id}_{date}_{time_str}"})
+                if len(row) == 3:
+                    keyboard['inline_keyboard'].append(row)
+                    row = []
+            current += timedelta(minutes=30)
+        
+        if row:
+            keyboard['inline_keyboard'].append(row)
+        
+        print(f"[DEBUG] Generated {len(keyboard['inline_keyboard'])} rows of time slots")
+        
+        if not keyboard['inline_keyboard']:
+            edit_message(chat_id, message_id, f"❌ К сожалению, на {date} нет свободного времени")
+        else:
+            edit_message(chat_id, message_id, f"Выберите время на {date}:", keyboard)
+        
+        return response(200, {'ok': True})
+    except Exception as e:
+        print(f"[ERROR] send_time_selection failed: {str(e)}")
+        return response(500, {'error': str(e)})
 
 
 def request_client_name(chat_id: int, message_id: int, service_id: int, date: str, time: str) -> dict:
