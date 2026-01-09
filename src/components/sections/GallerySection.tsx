@@ -1,36 +1,24 @@
 const GallerySection = () => {
   const photos = [
     {
-      url: "https://cdn.poehali.dev/files/photo_2026-01-01_18-18-54.jpg",
-      alt: "Французский маникюр с белыми кончиками"
+      url: "https://cdn.poehali.dev/files/photo_2026-01-09_17-48-03.jpg",
+      alt: "Красный глянцевый маникюр с блёстками"
     },
     {
-      url: "https://cdn.poehali.dev/files/photo_2026-01-01_18-19-04.jpg",
-      alt: "Элегантный френч с удлинением"
+      url: "https://cdn.poehali.dev/files/photo_2026-01-09_17-48-00.jpg",
+      alt: "Золотой глиттерный маникюр"
     },
     {
-      url: "https://cdn.poehali.dev/files/photo_2026-01-01_18-19-10.jpg",
-      alt: "Нежный маникюр с акцентом"
+      url: "https://cdn.poehali.dev/files/photo_2026-01-09_17-47-53.jpg",
+      alt: "Зелёный маникюр с дизайном"
     },
     {
-      url: "https://cdn.poehali.dev/files/photo_2026-01-01_18-19-29.jpg",
-      alt: "Японский маникюр с глянцевым блеском"
+      url: "https://cdn.poehali.dev/files/photo_2026-01-09_17-47-49.jpg",
+      alt: "Белый маникюр с мерцанием"
     },
     {
-      url: "https://cdn.poehali.dev/files/photo_2026-01-01_18-21-03.jpg",
-      alt: "Перламутровое покрытие с мерцанием"
-    },
-    {
-      url: "https://cdn.poehali.dev/files/photo_2025-12-27_13-32-52.jpg",
-      alt: "Красный глиттерный маникюр"
-    },
-    {
-      url: "https://cdn.poehali.dev/files/photo_2025-12-27_13-32-55.jpg",
-      alt: "Элегантный красный дизайн ногтей"
-    },
-    {
-      url: "https://cdn.poehali.dev/files/photo_2025-12-27_13-32-49.jpg",
-      alt: "Профессиональный маникюр с красным глиттером"
+      url: "https://cdn.poehali.dev/files/photo_2026-01-09_17-47-42.jpg",
+      alt: "Нюдовый маникюр с перламутром"
     }
   ];
 
