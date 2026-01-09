@@ -66,9 +66,45 @@ def get_session(chat_id: int) -> dict:
     conn.close()
     return json.loads(result['session_data']) if result and result['session_data'] else {}
 
-def get_user_info(telegram_id: int) -> dict:
+def register_master_if_whitelisted(telegram_id: int, username: str) -> bool:
+    """Автоматически регистрирует мастера по юзернейму"""
+    MASTER_USERNAMES = {
+        'kriwwwi': 'Виктория',
+        'promisslab': 'Алёна',
+        'sweetheart88': 'Алёна'  # Если это второй аккаунт Алёны
+    }
+    
+    username_clean = username.lower().replace('@', '')
+    
+    if username_clean not in MASTER_USERNAMES:
+        return False
+    
+    master_name = MASTER_USERNAMES[username_clean]
+    
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE t_p5914469_beauty_salon_project.masters 
+            SET telegram_chat_id = %s 
+            WHERE name = %s AND (telegram_chat_id IS NULL OR telegram_chat_id = '')
+        """, (str(telegram_id), master_name))
+        conn.commit()
+        updated = cur.rowcount > 0
+        cur.close()
+        conn.close()
+        return updated
+    except Exception as e:
+        print(f"[ERROR] Failed to register master: {e}")
+        return False
+
+def get_user_info(telegram_id: int, username: str = '') -> dict:
     """Определяет тип пользователя: мастер или клиент"""
     try:
+        # Если есть username, пробуем автоматически зарегистрировать как мастера
+        if username:
+            register_master_if_whitelisted(telegram_id, username)
+        
         conn = get_db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
@@ -161,9 +197,9 @@ def build_calendar(year: int, month: int, service_id: int = None) -> dict:
     
     return keyboard
 
-def show_main_menu(chat_id: int, telegram_id: int):
+def show_main_menu(chat_id: int, telegram_id: int, username: str = ''):
     """Главное меню в зависимости от типа пользователя"""
-    user = get_user_info(telegram_id)
+    user = get_user_info(telegram_id, username)
     
     if user['type'] == 'master':
         text = f"👨‍💼 <b>Добро пожаловать, {user['name']}!</b>\n\nВы вошли как мастер."
@@ -468,8 +504,10 @@ def handler(event: dict, context) -> dict:
             text = msg.get('text', '')
             user_id = msg['from']['id']
             
+            username = msg['from'].get('username', '')
+            
             if text == '/start':
-                show_main_menu(chat_id, user_id)
+                show_main_menu(chat_id, user_id, username)
             else:
                 handle_text_message(chat_id, text)
         
