@@ -19,6 +19,18 @@ const GallerySection = () => {
     {
       url: "https://cdn.poehali.dev/files/photo_2026-01-09_17-47-42.jpg",
       alt: "Нюдовый маникюр с перламутром"
+    },
+    {
+      url: "https://cdn.poehali.dev/files/photo_2026-01-09_17-59-39.jpg",
+      alt: "Классический красный глянцевый маникюр"
+    },
+    {
+      url: "https://cdn.poehali.dev/files/photo_2026-01-09_17-59-00.jpg",
+      alt: "Фиолетовый маникюр с блёстками"
+    },
+    {
+      url: "https://cdn.poehali.dev/files/photo_2026-01-09_17-59-12.jpg",
+      alt: "Французский маникюр с белыми кончиками"
     }
   ];
 
