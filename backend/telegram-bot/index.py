@@ -33,10 +33,13 @@ def handler(event: dict, context) -> dict:
         try:
             body = json.loads(event.get('body', '{}'))
             update = body
+            print(f"[DEBUG] Received update: {json.dumps(update)}")
             
             if 'message' in update:
                 return handle_message(update['message'])
             elif 'callback_query' in update:
+                callback_data = update['callback_query'].get('data', 'NO DATA')
+                print(f"[DEBUG] Processing callback: {callback_data}")
                 return handle_callback(update['callback_query'])
             
             return response(200, {'ok': True})
@@ -94,6 +97,7 @@ def handle_callback(callback: dict) -> dict:
         parts = data.split('_')
         service_id = int(parts[1])
         date = parts[2]
+        print(f"[DEBUG] Date selected: service_id={service_id}, date={date}")
         return send_time_selection(chat_id, message_id, service_id, date)
     elif data.startswith('time_'):
         parts = data.split('_')
@@ -241,6 +245,7 @@ def send_date_selection(chat_id: int, message_id: int, service_id: int) -> dict:
 
 def send_time_selection(chat_id: int, message_id: int, service_id: int, date: str) -> dict:
     """Доступное время с учётом длительности процедур и блокировок"""
+    print(f"[DEBUG] send_time_selection called: service_id={service_id}, date={date}")
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
