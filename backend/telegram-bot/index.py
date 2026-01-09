@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import datetime, timedelta
+from calendar import monthrange
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import requests
@@ -8,177 +9,261 @@ import requests
 BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
+MONTHS_RU = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+             'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
+DAYS_RU = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+
 def response(status_code: int, body: dict) -> dict:
-    """Формирование ответа для Yandex Cloud Functions"""
     return {
         'statusCode': status_code,
-        'headers': {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-        },
+        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
         'body': json.dumps(body, ensure_ascii=False),
         'isBase64Encoded': False
     }
 
 def get_db():
-    """Подключение к БД"""
     return psycopg2.connect(DATABASE_URL)
 
-def send_message(chat_id: int, text: str, keyboard: dict = None) -> dict:
-    """Отправка сообщения в Telegram"""
+def send_message(chat_id: int, text: str, keyboard: dict = None):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    payload = {
-        'chat_id': chat_id,
-        'text': text,
-        'parse_mode': 'HTML'
-    }
+    payload = {'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML'}
     if keyboard:
         payload['reply_markup'] = keyboard
-    
     resp = requests.post(url, json=payload)
-    print(f"[TELEGRAM] sendMessage response: {resp.status_code} {resp.text}")
+    print(f"[SEND] {resp.status_code}")
     return resp.json()
 
-def edit_message(chat_id: int, message_id: int, text: str, keyboard: dict = None) -> dict:
-    """Редактирование сообщения"""
+def edit_message(chat_id: int, message_id: int, text: str, keyboard: dict = None):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/editMessageText"
-    payload = {
-        'chat_id': chat_id,
-        'message_id': message_id,
-        'text': text,
-        'parse_mode': 'HTML'
-    }
+    payload = {'chat_id': chat_id, 'message_id': message_id, 'text': text, 'parse_mode': 'HTML'}
     if keyboard:
         payload['reply_markup'] = keyboard
-    
     resp = requests.post(url, json=payload)
-    print(f"[TELEGRAM] editMessage response: {resp.status_code}")
     return resp.json()
 
-def save_user_session(chat_id: int, data: dict):
-    """Сохранение сессии пользователя"""
+def answer_callback(callback_id: str, text: str = ""):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/answerCallbackQuery"
+    requests.post(url, json={'callback_query_id': callback_id, 'text': text})
+
+def save_session(chat_id: int, data: dict):
     conn = get_db()
     cur = conn.cursor()
-    
     cur.execute("""
         INSERT INTO t_p5914469_beauty_salon_project.user_sessions (chat_id, session_data, updated_at)
         VALUES (%s, %s, NOW())
-        ON CONFLICT (chat_id) 
-        DO UPDATE SET session_data = %s, updated_at = NOW()
+        ON CONFLICT (chat_id) DO UPDATE SET session_data = %s, updated_at = NOW()
     """, (chat_id, json.dumps(data), json.dumps(data)))
-    
     conn.commit()
     cur.close()
     conn.close()
 
-def get_user_session(chat_id: int) -> dict:
-    """Получение сессии пользователя"""
+def get_session(chat_id: int) -> dict:
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    
-    cur.execute(
-        "SELECT session_data FROM t_p5914469_beauty_salon_project.user_sessions WHERE chat_id = %s",
-        (chat_id,)
-    )
+    cur.execute("SELECT session_data FROM t_p5914469_beauty_salon_project.user_sessions WHERE chat_id = %s", (chat_id,))
     result = cur.fetchone()
-    
     cur.close()
     conn.close()
-    
-    if result and result['session_data']:
-        return json.loads(result['session_data'])
-    return {}
+    return json.loads(result['session_data']) if result and result['session_data'] else {}
 
-def send_masters_list(chat_id: int):
-    """Отправка списка мастеров"""
+def get_user_info(telegram_id: int) -> dict:
+    """Определяет тип пользователя: мастер или клиент"""
+    try:
+        conn = get_db()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Проверяем, мастер ли это
+        try:
+            cur.execute("SELECT id, name FROM t_p5914469_beauty_salon_project.masters WHERE telegram_chat_id = %s", (str(telegram_id),))
+            master = cur.fetchone()
+            
+            if master:
+                cur.close()
+                conn.close()
+                return {'type': 'master', 'id': master['id'], 'name': master['name']}
+        except Exception as e:
+            print(f"[WARN] Master check failed: {e}")
+        
+        # Проверяем предыдущие записи клиента
+        try:
+            cur.execute("""
+                SELECT client_name, client_phone 
+                FROM t_p5914469_beauty_salon_project.bookings 
+                WHERE telegram_id = %s AND client_name IS NOT NULL
+                ORDER BY created_at DESC LIMIT 1
+            """, (telegram_id,))
+            client = cur.fetchone()
+            
+            if client:
+                cur.close()
+                conn.close()
+                return {'type': 'client', 'name': client['client_name'], 'phone': client['client_phone']}
+        except Exception as e:
+            print(f"[WARN] Client check failed: {e}")
+        
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"[ERROR] DB connection failed: {e}")
+    
+    return {'type': 'new_client'}
+
+def build_calendar(year: int, month: int, service_id: int = None) -> dict:
+    """Создаёт интерактивный календарь"""
+    keyboard = {'inline_keyboard': []}
+    
+    # Заголовок с месяцем
+    keyboard['inline_keyboard'].append([
+        {'text': '◀️', 'callback_data': f'cal_prev_{year}_{month}_{service_id or 0}'},
+        {'text': f'{MONTHS_RU[month-1]} {year}', 'callback_data': 'ignore'},
+        {'text': '▶️', 'callback_data': f'cal_next_{year}_{month}_{service_id or 0}'}
+    ])
+    
+    # Дни недели
+    keyboard['inline_keyboard'].append([{'text': day, 'callback_data': 'ignore'} for day in DAYS_RU])
+    
+    # Первый день месяца и количество дней
+    first_weekday = datetime(year, month, 1).weekday()  # 0=Пн, 6=Вс
+    days_in_month = monthrange(year, month)[1]
+    
+    # Формируем недели
+    week = []
+    
+    # Пустые ячейки до первого дня
+    for _ in range(first_weekday):
+        week.append({'text': ' ', 'callback_data': 'ignore'})
+    
+    # Дни месяца
+    today = datetime.now().date()
+    for day in range(1, days_in_month + 1):
+        date = datetime(year, month, day).date()
+        
+        # Проверяем, не прошедшая ли дата
+        if date < today:
+            week.append({'text': str(day), 'callback_data': 'ignore'})
+        else:
+            date_str = date.strftime('%Y-%m-%d')
+            week.append({'text': str(day), 'callback_data': f'date_{service_id or 0}_{date_str}'})
+        
+        # Если неделя заполнена, добавляем в календарь
+        if len(week) == 7:
+            keyboard['inline_keyboard'].append(week)
+            week = []
+    
+    # Добавляем последнюю неделю если есть
+    if week:
+        while len(week) < 7:
+            week.append({'text': ' ', 'callback_data': 'ignore'})
+        keyboard['inline_keyboard'].append(week)
+    
+    # Кнопка назад
+    keyboard['inline_keyboard'].append([{'text': '« Назад', 'callback_data': 'back_to_services'}])
+    
+    return keyboard
+
+def show_main_menu(chat_id: int, telegram_id: int):
+    """Главное меню в зависимости от типа пользователя"""
+    user = get_user_info(telegram_id)
+    
+    if user['type'] == 'master':
+        text = f"👨‍💼 <b>Добро пожаловать, {user['name']}!</b>\n\nВы вошли как мастер."
+        keyboard = {
+            'inline_keyboard': [
+                [{'text': '📅 Мои записи сегодня', 'callback_data': 'master_today'}],
+                [{'text': '📋 Все записи', 'callback_data': 'master_all'}],
+                [{'text': '🚫 Заблокировать время', 'callback_data': 'master_block'}]
+            ]
+        }
+    elif user['type'] == 'client':
+        text = f"👋 <b>С возвращением, {user['name']}!</b>\n\nХотите записаться снова?"
+        keyboard = {
+            'inline_keyboard': [
+                [{'text': '📝 Записаться на процедуру', 'callback_data': 'client_book'}],
+                [{'text': '📋 Мои записи', 'callback_data': 'client_bookings'}]
+            ]
+        }
+    else:
+        text = "👋 <b>Добро пожаловать в салон красоты!</b>\n\nЗапишитесь на процедуру прямо сейчас."
+        keyboard = {
+            'inline_keyboard': [
+                [{'text': '📝 Записаться', 'callback_data': 'client_book'}]
+            ]
+        }
+    
+    send_message(chat_id, text, keyboard)
+
+def show_masters(chat_id: int, message_id: int = None):
+    """Список мастеров"""
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    
     cur.execute("SELECT id, name FROM t_p5914469_beauty_salon_project.masters ORDER BY name")
     masters = cur.fetchall()
-    
     cur.close()
     conn.close()
     
     keyboard = {'inline_keyboard': []}
     for master in masters:
-        keyboard['inline_keyboard'].append([
-            {'text': master['name'], 'callback_data': f"master_{master['id']}"}
-        ])
+        keyboard['inline_keyboard'].append([{'text': f"👤 {master['name']}", 'callback_data': f"master_{master['id']}"}])
     
-    send_message(chat_id, "👨‍💼 Выберите мастера:", keyboard)
+    keyboard['inline_keyboard'].append([{'text': '« Назад', 'callback_data': 'start'}])
+    
+    text = "👨‍💼 <b>Выберите мастера:</b>"
+    
+    if message_id:
+        edit_message(chat_id, message_id, text, keyboard)
+    else:
+        send_message(chat_id, text, keyboard)
 
-def send_services_list(chat_id: int, message_id: int, master_id: int):
-    """Отправка услуг выбранного мастера"""
+def show_services(chat_id: int, message_id: int, master_id: int):
+    """Услуги мастера"""
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    
     cur.execute("""
         SELECT id, name, duration, price 
         FROM t_p5914469_beauty_salon_project.services 
-        WHERE master_id = %s 
-        ORDER BY name
+        WHERE master_id = %s ORDER BY name
     """, (master_id,))
     services = cur.fetchall()
-    
     cur.close()
     conn.close()
     
     keyboard = {'inline_keyboard': []}
-    for service in services:
-        text = f"{service['name']} ({service['duration']} мин, {service['price']}₽)"
+    for s in services:
         keyboard['inline_keyboard'].append([
-            {'text': text, 'callback_data': f"service_{service['id']}"}
+            {'text': f"{s['name']} — {s['duration']} мин, {s['price']}₽", 'callback_data': f"service_{s['id']}"}
         ])
     
     keyboard['inline_keyboard'].append([{'text': '« Назад', 'callback_data': 'back_to_masters'}])
     
-    edit_message(chat_id, message_id, "💇 Выберите услугу:", keyboard)
+    edit_message(chat_id, message_id, "💇 <b>Выберите услугу:</b>", keyboard)
 
-def send_dates(chat_id: int, message_id: int, service_id: int):
-    """Отправка доступных дат"""
-    keyboard = {'inline_keyboard': []}
+def show_calendar(chat_id: int, message_id: int, service_id: int, year: int = None, month: int = None):
+    """Показать календарь"""
+    if not year or not month:
+        now = datetime.now()
+        year, month = now.year, now.month
     
-    today = datetime.now()
-    for i in range(7):
-        date = today + timedelta(days=i)
-        date_str = date.strftime('%Y-%m-%d')
-        display = date.strftime('%d.%m (%a)')
-        
-        keyboard['inline_keyboard'].append([
-            {'text': display, 'callback_data': f"date_{service_id}_{date_str}"}
-        ])
-    
-    keyboard['inline_keyboard'].append([{'text': '« Назад', 'callback_data': 'back_to_services'}])
-    
-    edit_message(chat_id, message_id, "📅 Выберите дату:", keyboard)
+    keyboard = build_calendar(year, month, service_id)
+    edit_message(chat_id, message_id, "📅 <b>Выберите дату:</b>", keyboard)
 
-def send_time_slots(chat_id: int, message_id: int, service_id: int, date: str):
-    """Отправка доступного времени"""
+def show_time_slots(chat_id: int, message_id: int, service_id: int, date: str):
+    """Временные слоты"""
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    # Получаем данные услуги
-    cur.execute(
-        "SELECT master_id, duration FROM t_p5914469_beauty_salon_project.services WHERE id = %s",
-        (service_id,)
-    )
+    cur.execute("SELECT master_id, duration FROM t_p5914469_beauty_salon_project.services WHERE id = %s", (service_id,))
     service = cur.fetchone()
-    master_id = service['master_id']
-    duration = service['duration']
+    master_id, duration = service['master_id'], service['duration']
     
-    # Получаем занятые слоты
+    # Занятые слоты
     cur.execute("""
-        SELECT booking_time, duration 
-        FROM t_p5914469_beauty_salon_project.bookings 
+        SELECT booking_time, duration FROM t_p5914469_beauty_salon_project.bookings 
         WHERE master_id = %s AND booking_date = %s AND status != 'cancelled'
     """, (master_id, date))
     bookings = cur.fetchall()
     
-    # Получаем блокировки
     cur.execute("""
-        SELECT block_start, block_end
-        FROM t_p5914469_beauty_salon_project.master_blocks
+        SELECT block_start, block_end FROM t_p5914469_beauty_salon_project.master_blocks
         WHERE master_id = %s AND block_date = %s
     """, (master_id, date))
     blocks = cur.fetchall()
@@ -186,20 +271,17 @@ def send_time_slots(chat_id: int, message_id: int, service_id: int, date: str):
     cur.close()
     conn.close()
     
-    # Формируем список занятых интервалов
     occupied = []
-    
-    for booking in bookings:
-        start = datetime.strptime(str(booking['booking_time']), '%H:%M:%S')
-        end = start + timedelta(minutes=booking['duration'])
+    for b in bookings:
+        start = datetime.strptime(str(b['booking_time']), '%H:%M:%S')
+        end = start + timedelta(minutes=b['duration'])
         occupied.append((start, end))
     
-    for block in blocks:
-        start = datetime.strptime(str(block['block_start']), '%H:%M:%S')
-        end = datetime.strptime(str(block['block_end']), '%H:%M:%S')
+    for b in blocks:
+        start = datetime.strptime(str(b['block_start']), '%H:%M:%S')
+        end = datetime.strptime(str(b['block_end']), '%H:%M:%S')
         occupied.append((start, end))
     
-    # Генерируем слоты
     keyboard = {'inline_keyboard': []}
     row = []
     
@@ -209,18 +291,11 @@ def send_time_slots(chat_id: int, message_id: int, service_id: int, date: str):
     
     while current < end_time:
         slot_end = current + timedelta(minutes=duration)
-        
-        # Проверяем доступность
-        available = True
-        for occ_start, occ_end in occupied:
-            if not (slot_end <= occ_start or current >= occ_end):
-                available = False
-                break
+        available = all(slot_end <= os or current >= oe for os, oe in occupied)
         
         if available:
             time_str = current.strftime('%H:%M')
             row.append({'text': time_str, 'callback_data': f"time_{service_id}_{date}_{time_str}"})
-            
             if len(row) == 3:
                 keyboard['inline_keyboard'].append(row)
                 row = []
@@ -230,187 +305,173 @@ def send_time_slots(chat_id: int, message_id: int, service_id: int, date: str):
     if row:
         keyboard['inline_keyboard'].append(row)
     
-    keyboard['inline_keyboard'].append([{'text': '« Назад', 'callback_data': f"back_to_dates_{service_id}"}])
+    year, month = date.split('-')[0], date.split('-')[1]
+    keyboard['inline_keyboard'].append([{'text': '« К календарю', 'callback_data': f'back_to_calendar_{service_id}_{year}_{month}'}])
     
     if len(keyboard['inline_keyboard']) == 1:
-        edit_message(chat_id, message_id, f"❌ На {date} нет свободного времени")
+        edit_message(chat_id, message_id, f"❌ На {date} нет свободных слотов")
     else:
-        edit_message(chat_id, message_id, f"🕐 Выберите время на {date}:", keyboard)
+        edit_message(chat_id, message_id, f"🕐 <b>Выберите время ({date}):</b>", keyboard)
 
-def request_name(chat_id: int, message_id: int, service_id: int, date: str, time: str):
-    """Запрос имени клиента"""
-    save_user_session(chat_id, {
-        'state': 'waiting_name',
-        'service_id': service_id,
-        'date': date,
-        'time': time
-    })
+def request_client_data(chat_id: int, message_id: int, service_id: int, date: str, time: str):
+    """Запрос данных клиента"""
+    user = get_user_info(chat_id)
     
-    edit_message(chat_id, message_id, "✏️ Введите ваше имя:")
+    if user['type'] == 'client':
+        # Клиент уже известен, создаём запись сразу
+        create_booking(chat_id, service_id, date, time, user['name'], user['phone'])
+    else:
+        # Новый клиент, запрашиваем данные
+        save_session(chat_id, {'state': 'waiting_name', 'service_id': service_id, 'date': date, 'time': time})
+        edit_message(chat_id, message_id, "✏️ Введите ваше имя:")
 
-def request_phone(chat_id: int, name: str):
-    """Запрос телефона"""
-    session = get_user_session(chat_id)
-    session['state'] = 'waiting_phone'
-    session['name'] = name
-    save_user_session(chat_id, session)
-    
-    send_message(chat_id, "📱 Введите ваш телефон:")
-
-def create_booking(chat_id: int, phone: str):
+def create_booking(chat_id: int, service_id: int, date: str, time: str, name: str, phone: str):
     """Создание записи"""
-    session = get_user_session(chat_id)
-    
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    # Получаем данные услуги
-    cur.execute(
-        "SELECT master_id, name, price FROM t_p5914469_beauty_salon_project.services WHERE id = %s",
-        (session['service_id'],)
-    )
+    cur.execute("SELECT master_id, name, price FROM t_p5914469_beauty_salon_project.services WHERE id = %s", (service_id,))
     service = cur.fetchone()
     
-    # Создаём запись
     cur.execute("""
         INSERT INTO t_p5914469_beauty_salon_project.bookings 
-        (master_id, service_id, client_name, client_phone, booking_date, booking_time, duration, price, status)
+        (master_id, service_id, client_name, client_phone, booking_date, booking_time, duration, price, status, telegram_id)
         VALUES (%s, %s, %s, %s, %s, %s, 
             (SELECT duration FROM t_p5914469_beauty_salon_project.services WHERE id = %s),
-            %s, 'confirmed')
+            %s, 'confirmed', %s)
         RETURNING id
-    """, (
-        service['master_id'],
-        session['service_id'],
-        session['name'],
-        phone,
-        session['date'],
-        session['time'],
-        session['service_id'],
-        service['price']
-    ))
+    """, (service['master_id'], service_id, name, phone, date, time, service_id, service['price'], chat_id))
     
     booking_id = cur.fetchone()['id']
-    
     conn.commit()
     cur.close()
     conn.close()
     
-    # Очищаем сессию
-    save_user_session(chat_id, {})
+    save_session(chat_id, {})
     
-    # Отправляем подтверждение
-    text = f"""
-✅ <b>Запись подтверждена!</b>
+    text = f"""✅ <b>Запись подтверждена!</b>
 
-📋 Услуга: {service['name']}
-📅 Дата: {session['date']}
-🕐 Время: {session['time']}
-💰 Стоимость: {service['price']}₽
+📋 {service['name']}
+📅 {date}
+🕐 {time}
+💰 {service['price']}₽
 
-👤 {session['name']}
+👤 {name}
 📱 {phone}
 
-Номер записи: #{booking_id}
-"""
+№{booking_id}"""
     
-    keyboard = {
-        'inline_keyboard': [[
-            {'text': '📝 Новая запись', 'callback_data': 'start'}
-        ]]
-    }
-    
+    keyboard = {'inline_keyboard': [[{'text': '📝 Новая запись', 'callback_data': 'client_book'}]]}
     send_message(chat_id, text, keyboard)
 
-def handle_message(chat_id: int, text: str):
-    """Обработка текстовых сообщений"""
-    session = get_user_session(chat_id)
+def handle_text_message(chat_id: int, text: str):
+    """Обработка текста"""
+    session = get_session(chat_id)
     state = session.get('state')
     
     if state == 'waiting_name':
-        request_phone(chat_id, text)
-    elif state == 'waiting_phone':
-        create_booking(chat_id, text)
-    else:
-        send_masters_list(chat_id)
-
-def handle_callback(chat_id: int, message_id: int, data: str):
-    """Обработка callback кнопок"""
-    print(f"[CALLBACK] {data}")
+        session['name'] = text
+        session['state'] = 'waiting_phone'
+        save_session(chat_id, session)
+        send_message(chat_id, "📱 Введите ваш телефон:")
     
-    if data == 'start' or data == 'back_to_masters':
-        send_masters_list(chat_id)
+    elif state == 'waiting_phone':
+        create_booking(chat_id, session['service_id'], session['date'], session['time'], session['name'], text)
+
+def handle_callback_query(callback_query: dict):
+    """Обработка callback"""
+    data = callback_query['data']
+    chat_id = callback_query['message']['chat']['id']
+    message_id = callback_query['message']['message_id']
+    callback_id = callback_query['id']
+    user_id = callback_query['from']['id']
+    
+    answer_callback(callback_id)
+    
+    if data == 'ignore':
+        return
+    
+    if data == 'start':
+        show_main_menu(chat_id, user_id)
+    
+    elif data == 'client_book':
+        show_masters(chat_id, message_id)
+    
+    elif data == 'back_to_masters':
+        show_masters(chat_id, message_id)
     
     elif data.startswith('master_'):
         master_id = int(data.split('_')[1])
-        save_user_session(chat_id, {'master_id': master_id})
-        send_services_list(chat_id, message_id, master_id)
+        save_session(chat_id, {'master_id': master_id})
+        show_services(chat_id, message_id, master_id)
     
     elif data == 'back_to_services':
-        session = get_user_session(chat_id)
-        send_services_list(chat_id, message_id, session.get('master_id'))
+        session = get_session(chat_id)
+        show_services(chat_id, message_id, session.get('master_id'))
     
     elif data.startswith('service_'):
         service_id = int(data.split('_')[1])
-        send_dates(chat_id, message_id, service_id)
+        show_calendar(chat_id, message_id, service_id)
     
-    elif data.startswith('back_to_dates_'):
-        service_id = int(data.split('_')[3])
-        send_dates(chat_id, message_id, service_id)
+    elif data.startswith('cal_prev_'):
+        parts = data.split('_')
+        year, month, service_id = int(parts[2]), int(parts[3]), int(parts[4])
+        month -= 1
+        if month < 1:
+            month = 12
+            year -= 1
+        show_calendar(chat_id, message_id, service_id, year, month)
+    
+    elif data.startswith('cal_next_'):
+        parts = data.split('_')
+        year, month, service_id = int(parts[2]), int(parts[3]), int(parts[4])
+        month += 1
+        if month > 12:
+            month = 1
+            year += 1
+        show_calendar(chat_id, message_id, service_id, year, month)
+    
+    elif data.startswith('back_to_calendar_'):
+        parts = data.split('_')
+        service_id, year, month = int(parts[3]), int(parts[4]), int(parts[5])
+        show_calendar(chat_id, message_id, service_id, year, month)
     
     elif data.startswith('date_'):
         parts = data.split('_')
         service_id = int(parts[1])
         date = parts[2]
-        send_time_slots(chat_id, message_id, service_id, date)
+        show_time_slots(chat_id, message_id, service_id, date)
     
     elif data.startswith('time_'):
         parts = data.split('_')
-        service_id = int(parts[1])
-        date = parts[2]
-        time = parts[3]
-        request_name(chat_id, message_id, service_id, date, time)
+        service_id, date, time = int(parts[1]), parts[2], parts[3]
+        request_client_data(chat_id, message_id, service_id, date, time)
 
 def handler(event: dict, context) -> dict:
-    """Telegram bot webhook handler"""
-    print(f"[REQUEST] {json.dumps(event, ensure_ascii=False)}")
+    """Telegram bot webhook"""
+    print(f"[EVENT] {json.dumps(event, ensure_ascii=False)}")
     
     method = event.get('httpMethod', 'POST')
     
     if method == 'OPTIONS':
-        return {
-            'statusCode': 200,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type'
-            },
-            'body': '',
-            'isBase64Encoded': False
-        }
+        return {'statusCode': 200, 'headers': {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type'}, 'body': '', 'isBase64Encoded': False}
     
     try:
         body = json.loads(event.get('body', '{}'))
         
-        # Обработка callback
         if 'callback_query' in body:
-            callback = body['callback_query']
-            chat_id = callback['message']['chat']['id']
-            message_id = callback['message']['message_id']
-            data = callback['data']
-            
-            handle_callback(chat_id, message_id, data)
+            handle_callback_query(body['callback_query'])
         
-        # Обработка сообщения
         elif 'message' in body:
-            message = body['message']
-            chat_id = message['chat']['id']
-            text = message.get('text', '')
+            msg = body['message']
+            chat_id = msg['chat']['id']
+            text = msg.get('text', '')
+            user_id = msg['from']['id']
             
             if text == '/start':
-                send_masters_list(chat_id)
+                show_main_menu(chat_id, user_id)
             else:
-                handle_message(chat_id, text)
+                handle_text_message(chat_id, text)
         
         return response(200, {'ok': True})
     
