@@ -67,7 +67,11 @@ def get_session(chat_id: int) -> dict:
     result = cur.fetchone()
     cur.close()
     conn.close()
-    return json.loads(result['session_data']) if result and result['session_data'] else {}
+    if not result or not result['session_data']:
+        return {}
+    # session_data уже dict (JSONB поле), не нужно парсить
+    data = result['session_data']
+    return data if isinstance(data, dict) else json.loads(data)
 
 def register_master_if_whitelisted(telegram_id: int, username: str) -> bool:
     """Автоматически регистрирует мастера по юзернейму"""
