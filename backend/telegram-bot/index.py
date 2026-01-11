@@ -349,6 +349,101 @@ def show_time_slots(chat_id: int, message_id: int, service_id: int, date: str):
     else:
         edit_message(chat_id, message_id, f"🕐 <b>Выберите время ({date}):</b>", keyboard)
 
+def show_master_bookings_today(chat_id: int, message_id: int, master_id: int):
+    """Записи мастера на сегодня"""
+    today = datetime.now().date()
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("""
+        SELECT b.id, b.client_name, b.client_phone, b.booking_time, s.name as service_name, b.duration, b.price
+        FROM t_p5914469_beauty_salon_project.bookings b
+        JOIN t_p5914469_beauty_salon_project.services s ON b.service_id = s.id
+        WHERE b.master_id = %s AND b.booking_date = %s AND b.status = 'confirmed'
+        ORDER BY b.booking_time
+    """, (master_id, today))
+    bookings = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    if not bookings:
+        text = "📅 <b>На сегодня записей нет</b>"
+    else:
+        text = f"📅 <b>Записи на {today.strftime('%d.%m.%Y')}:</b>\n\n"
+        for b in bookings:
+            text += f"🕐 {b['booking_time']} — {b['service_name']}\n"
+            text += f"👤 {b['client_name']} ({b['client_phone']})\n"
+            text += f"💰 {b['price']}₽\n\n"
+    
+    keyboard = {'inline_keyboard': [[{'text': '« Назад', 'callback_data': 'start'}]]}
+    edit_message(chat_id, message_id, text, keyboard)
+
+def show_master_all_bookings(chat_id: int, message_id: int, master_id: int):
+    """Все будущие записи мастера"""
+    today = datetime.now().date()
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("""
+        SELECT b.id, b.client_name, b.client_phone, b.booking_date, b.booking_time, s.name as service_name, b.duration, b.price
+        FROM t_p5914469_beauty_salon_project.bookings b
+        JOIN t_p5914469_beauty_salon_project.services s ON b.service_id = s.id
+        WHERE b.master_id = %s AND b.booking_date >= %s AND b.status = 'confirmed'
+        ORDER BY b.booking_date, b.booking_time
+        LIMIT 10
+    """, (master_id, today))
+    bookings = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    if not bookings:
+        text = "📋 <b>Будущих записей нет</b>"
+    else:
+        text = "📋 <b>Ближайшие записи:</b>\n\n"
+        for b in bookings:
+            text += f"📅 {b['booking_date'].strftime('%d.%m.%Y')} в {b['booking_time']}\n"
+            text += f"💇 {b['service_name']}\n"
+            text += f"👤 {b['client_name']} ({b['client_phone']})\n"
+            text += f"💰 {b['price']}₽\n\n"
+    
+    keyboard = {'inline_keyboard': [[{'text': '« Назад', 'callback_data': 'start'}]]}
+    edit_message(chat_id, message_id, text, keyboard)
+
+def show_client_bookings(chat_id: int, message_id: int, telegram_id: int):
+    """Записи клиента"""
+    today = datetime.now().date()
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("""
+        SELECT b.id, b.booking_date, b.booking_time, s.name as service_name, m.name as master_name, b.price
+        FROM t_p5914469_beauty_salon_project.bookings b
+        JOIN t_p5914469_beauty_salon_project.services s ON b.service_id = s.id
+        JOIN t_p5914469_beauty_salon_project.masters m ON b.master_id = m.id
+        WHERE b.telegram_id = %s AND b.booking_date >= %s AND b.status = 'confirmed'
+        ORDER BY b.booking_date, b.booking_time
+    """, (telegram_id, today))
+    bookings = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    if not bookings:
+        text = "📋 <b>У вас нет активных записей</b>"
+        keyboard = {'inline_keyboard': [
+            [{'text': '📝 Записаться', 'callback_data': 'client_book'}]
+        ]}
+    else:
+        text = "📋 <b>Ваши записи:</b>\n\n"
+        for b in bookings:
+            text += f"📅 {b['booking_date'].strftime('%d.%m.%Y')} в {b['booking_time']}\n"
+            text += f"💇 {b['service_name']}\n"
+            text += f"👤 Мастер: {b['master_name']}\n"
+            text += f"💰 {b['price']}₽\n\n"
+        
+        keyboard = {'inline_keyboard': [
+            [{'text': '📝 Новая запись', 'callback_data': 'client_book'}],
+            [{'text': '« Назад', 'callback_data': 'start'}]
+        ]}
+    
+    edit_message(chat_id, message_id, text, keyboard)
+
 def request_client_data(chat_id: int, message_id: int, service_id: int, date: str, time: str):
     """Запрос данных клиента"""
     user = get_user_info(chat_id)
@@ -433,10 +528,26 @@ def handle_callback_query(callback_query: dict):
     elif data == 'client_book':
         show_masters(chat_id, message_id)
     
+    elif data == 'client_bookings':
+        show_client_bookings(chat_id, message_id, user_id)
+    
+    elif data == 'master_today':
+        user = get_user_info(user_id)
+        if user['type'] == 'master':
+            show_master_bookings_today(chat_id, message_id, user['id'])
+    
+    elif data == 'master_all':
+        user = get_user_info(user_id)
+        if user['type'] == 'master':
+            show_master_all_bookings(chat_id, message_id, user['id'])
+    
+    elif data == 'master_block':
+        edit_message(chat_id, message_id, "⚠️ Функция блокировки времени в разработке")
+    
     elif data == 'back_to_masters':
         show_masters(chat_id, message_id)
     
-    elif data.startswith('master_'):
+    elif data.startswith('master_') and data not in ['master_today', 'master_all', 'master_block']:
         master_id = int(data.split('_')[1])
         save_session(chat_id, {'master_id': master_id})
         show_services(chat_id, message_id, master_id)
