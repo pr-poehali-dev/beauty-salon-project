@@ -455,6 +455,13 @@ def show_client_bookings(chat_id: int, message_id: int, telegram_id: int):
     
     edit_message(chat_id, message_id, text, keyboard)
 
+def extract_price(price_str: str) -> int:
+    """Извлекает число из строки цены ('от 1500 ₽' -> 1500, '600 ₽' -> 600)"""
+    import re
+    # Ищем первое число в строке
+    match = re.search(r'\d+', price_str)
+    return int(match.group()) if match else 0
+
 def request_client_data(chat_id: int, message_id: int, service_id: int, date: str, time: str):
     """Запрос данных клиента"""
     user = get_user_info(chat_id)
@@ -475,6 +482,9 @@ def create_booking(chat_id: int, service_id: int, date: str, time: str, name: st
     cur.execute("SELECT master_id, name, price FROM t_p5914469_beauty_salon_project.services WHERE id = %s", (service_id,))
     service = cur.fetchone()
     
+    # Извлекаем числовое значение цены
+    price_numeric = extract_price(service['price'])
+    
     cur.execute("""
         INSERT INTO t_p5914469_beauty_salon_project.bookings 
         (master_id, service_id, client_name, client_phone, booking_date, booking_time, duration, price, status, telegram_id)
@@ -482,7 +492,7 @@ def create_booking(chat_id: int, service_id: int, date: str, time: str, name: st
             (SELECT duration FROM t_p5914469_beauty_salon_project.services WHERE id = %s),
             %s, 'confirmed', %s)
         RETURNING id
-    """, (service['master_id'], service_id, name, phone, date, time, service_id, service['price'], chat_id))
+    """, (service['master_id'], service_id, name, phone, date, time, service_id, price_numeric, chat_id))
     
     booking_id = cur.fetchone()['id']
     conn.commit()
