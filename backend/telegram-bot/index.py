@@ -218,7 +218,9 @@ def show_main_menu(chat_id: int, telegram_id: int, username: str = ''):
             'inline_keyboard': [
                 [{'text': '📅 Мои записи сегодня', 'callback_data': 'master_today'}],
                 [{'text': '📋 Все записи', 'callback_data': 'master_all'}],
-                [{'text': '🚫 Заблокировать время', 'callback_data': 'master_block'}]
+                [{'text': '➕ Добавить клиента', 'callback_data': 'master_add_client'}],
+                [{'text': '🚫 Заблокировать время', 'callback_data': 'master_block_start'}],
+                [{'text': '⏰ График работы', 'callback_data': 'master_schedule'}]
             ]
         }
     elif user['type'] == 'client':
@@ -359,6 +361,35 @@ def show_time_slots(chat_id: int, message_id: int, service_id: int, date: str):
         edit_message(chat_id, message_id, f"❌ На {date} нет свободных слотов")
     else:
         edit_message(chat_id, message_id, f"🕐 <b>Выберите время ({date}):</b>", keyboard)
+
+def show_master_schedule(chat_id: int, message_id: int, master_id: int):
+    """График работы мастера"""
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("""
+        SELECT id, work_date, start_time, end_time
+        FROM t_p5914469_beauty_salon_project.work_schedule
+        WHERE master = (SELECT name FROM t_p5914469_beauty_salon_project.masters WHERE id = %s)
+        AND work_date >= CURRENT_DATE
+        ORDER BY work_date
+        LIMIT 7
+    """, (master_id,))
+    schedule = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    if not schedule:
+        text = "⏰ <b>График работы не настроен</b>\n\nДобавьте свои рабочие дни и часы."
+    else:
+        text = "⏰ <b>Ваш график работы:</b>\n\n"
+        for s in schedule:
+            text += f"📅 {s['work_date'].strftime('%d.%m.%Y')} — {s['start_time']} - {s['end_time']}\n"
+    
+    keyboard = {'inline_keyboard': [
+        [{'text': '➕ Добавить рабочий день', 'callback_data': 'schedule_add_start'}],
+        [{'text': '« Назад', 'callback_data': 'start'}]
+    ]}
+    edit_message(chat_id, message_id, text, keyboard)
 
 def show_master_bookings_today(chat_id: int, message_id: int, master_id: int):
     """Записи мастера на сегодня"""
@@ -529,6 +560,79 @@ def handle_text_message(chat_id: int, text: str):
     
     elif state == 'waiting_phone':
         create_booking(chat_id, session['service_id'], session['date'], session['time'], session['name'], text)
+    
+    elif state == 'block_time_input':
+        # Мастер вводит время блокировки (например, "10:00-12:00")
+        try:
+            times = text.split('-')
+            if len(times) != 2:
+                send_message(chat_id, "❌ Неверный формат. Введите время как: 10:00-12:00")
+                return
+            
+            start_time = times[0].strip()
+            end_time = times[1].strip()
+            
+            conn = get_db()
+            cur = conn.cursor()
+            user = get_user_info(chat_id)
+            cur.execute("""
+                INSERT INTO t_p5914469_beauty_salon_project.master_blocks 
+                (master_id, block_date, block_start, block_end, reason)
+                VALUES (%s, %s, %s, %s, 'Заблокировано мастером')
+            """, (user['id'], session['block_date'], start_time, end_time))
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            save_session(chat_id, {})
+            send_message(chat_id, f"✅ Время заблокировано:\n📅 {session['block_date']}\n⏰ {start_time} - {end_time}")
+        except Exception as e:
+            print(f"[ERROR] Block time: {e}")
+            send_message(chat_id, "❌ Ошибка. Проверьте формат времени (10:00-12:00)")
+    
+    elif state == 'schedule_time_input':
+        # Мастер вводит рабочее время
+        try:
+            times = text.split('-')
+            if len(times) != 2:
+                send_message(chat_id, "❌ Неверный формат. Введите время как: 09:00-18:00")
+                return
+            
+            start_time = times[0].strip()
+            end_time = times[1].strip()
+            
+            conn = get_db()
+            cur = conn.cursor()
+            user = get_user_info(chat_id)
+            cur.execute("""
+                SELECT name FROM t_p5914469_beauty_salon_project.masters WHERE id = %s
+            """, (user['id'],))
+            master_name = cur.fetchone()[0]
+            
+            cur.execute("""
+                INSERT INTO t_p5914469_beauty_salon_project.work_schedule 
+                (master, work_date, start_time, end_time)
+                VALUES (%s, %s, %s, %s)
+            """, (master_name, session['schedule_date'], start_time, end_time))
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            save_session(chat_id, {})
+            send_message(chat_id, f"✅ Рабочий день добавлен:\n📅 {session['schedule_date']}\n⏰ {start_time} - {end_time}")
+        except Exception as e:
+            print(f"[ERROR] Schedule time: {e}")
+            send_message(chat_id, "❌ Ошибка. Проверьте формат времени (09:00-18:00)")
+    
+    elif state == 'add_client_name':
+        session['client_name'] = text
+        session['state'] = 'add_client_phone'
+        save_session(chat_id, session)
+        send_message(chat_id, "📱 Введите телефон клиента:")
+    
+    elif state == 'add_client_phone':
+        create_booking(chat_id, session['service_id'], session['date'], session['time'], session['client_name'], text)
+        save_session(chat_id, {})
 
 def handle_callback_query(callback_query: dict):
     """Обработка callback"""
@@ -563,9 +667,30 @@ def handle_callback_query(callback_query: dict):
         if user['type'] == 'master':
             show_master_all_bookings(chat_id, message_id, user['id'])
     
-    elif data == 'master_block':
-        keyboard = {'inline_keyboard': [[{'text': '« Назад', 'callback_data': 'start'}]]}
-        edit_message(chat_id, message_id, "⚠️ Функция блокировки времени в разработке", keyboard)
+    elif data == 'master_schedule':
+        user = get_user_info(user_id)
+        if user['type'] == 'master':
+            show_master_schedule(chat_id, message_id, user['id'])
+    
+    elif data == 'master_block_start':
+        save_session(chat_id, {'state': 'master_block_select_date', 'master_id': user_id})
+        now = datetime.now()
+        keyboard = build_calendar(now.year, now.month, 0)
+        keyboard['inline_keyboard'].append([{'text': '« Назад', 'callback_data': 'start'}])
+        edit_message(chat_id, message_id, "🚫 <b>Блокировка времени</b>\n\nВыберите дату:", keyboard)
+    
+    elif data == 'master_add_client':
+        user = get_user_info(user_id)
+        if user['type'] == 'master':
+            save_session(chat_id, {'state': 'add_client_select_service', 'master_id': user['id']})
+            show_services(chat_id, message_id, user['id'])
+    
+    elif data == 'schedule_add_start':
+        save_session(chat_id, {'state': 'schedule_select_date', 'master_id': user_id})
+        now = datetime.now()
+        keyboard = build_calendar(now.year, now.month, 0)
+        keyboard['inline_keyboard'].append([{'text': '« Назад', 'callback_data': 'master_schedule'}])
+        edit_message(chat_id, message_id, "📅 <b>Добавить рабочий день</b>\n\nВыберите дату:", keyboard)
     
     elif data == 'back_to_masters':
         show_masters(chat_id, message_id)
@@ -581,7 +706,16 @@ def handle_callback_query(callback_query: dict):
     
     elif data.startswith('service_'):
         service_id = int(data.split('_')[1])
-        show_calendar(chat_id, message_id, service_id)
+        session = get_session(chat_id)
+        
+        # Проверяем, мастер добавляет клиента
+        if session.get('state') == 'add_client_select_service':
+            session['service_id'] = service_id
+            session['state'] = 'add_client_select_date'
+            save_session(chat_id, session)
+            show_calendar(chat_id, message_id, service_id)
+        else:
+            show_calendar(chat_id, message_id, service_id)
     
     elif data.startswith('cal_prev_'):
         parts = data.split('_')
@@ -610,12 +744,38 @@ def handle_callback_query(callback_query: dict):
         parts = data.split('_')
         service_id = int(parts[1])
         date = parts[2]
-        show_time_slots(chat_id, message_id, service_id, date)
+        
+        session = get_session(chat_id)
+        
+        # Проверяем, это блокировка или график
+        if session.get('state') == 'master_block_select_date':
+            save_session(chat_id, {'state': 'block_time_input', 'block_date': date})
+            edit_message(chat_id, message_id, f"⏰ Введите время блокировки на {date}:\n\nПример: 10:00-12:00")
+        elif session.get('state') == 'schedule_select_date':
+            save_session(chat_id, {'state': 'schedule_time_input', 'schedule_date': date})
+            edit_message(chat_id, message_id, f"⏰ Введите рабочее время на {date}:\n\nПример: 09:00-18:00")
+        elif session.get('state') == 'add_client_select_date':
+            session['date'] = date
+            session['state'] = 'add_client_select_time'
+            save_session(chat_id, session)
+            show_time_slots(chat_id, message_id, session['service_id'], date)
+        else:
+            show_time_slots(chat_id, message_id, service_id, date)
     
     elif data.startswith('time_'):
         parts = data.split('_')
         service_id, date, time = int(parts[1]), parts[2], parts[3]
-        request_client_data(chat_id, message_id, service_id, date, time)
+        
+        session = get_session(chat_id)
+        
+        # Проверяем, мастер добавляет клиента или клиент записывается
+        if session.get('state') == 'add_client_select_time':
+            session['time'] = time
+            session['state'] = 'add_client_name'
+            save_session(chat_id, session)
+            edit_message(chat_id, message_id, "✏️ Введите имя клиента:")
+        else:
+            request_client_data(chat_id, message_id, service_id, date, time)
 
 def handler(event: dict, context) -> dict:
     """Telegram bot webhook"""
