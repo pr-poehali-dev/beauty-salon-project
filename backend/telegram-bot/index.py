@@ -487,12 +487,12 @@ def create_booking(chat_id: int, service_id: int, date: str, time: str, name: st
     
     cur.execute("""
         INSERT INTO t_p5914469_beauty_salon_project.bookings 
-        (master_id, service_id, client_name, client_phone, booking_date, booking_time, duration, price, status, telegram_id)
-        VALUES (%s, %s, %s, %s, %s, %s, 
+        (name, phone, service, master_id, service_id, client_name, client_phone, booking_date, booking_time, duration, price, status, telegram_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 
             (SELECT duration FROM t_p5914469_beauty_salon_project.services WHERE id = %s),
             %s, 'confirmed', %s)
         RETURNING id
-    """, (service['master_id'], service_id, name, phone, date, time, service_id, price_numeric, chat_id))
+    """, (name, phone, service['name'], service['master_id'], service_id, name, phone, date, time, service_id, price_numeric, chat_id))
     
     booking_id = cur.fetchone()['id']
     conn.commit()
