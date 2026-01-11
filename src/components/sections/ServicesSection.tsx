@@ -72,6 +72,16 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
       ]
     },
     {
+      category: "Массаж",
+      items: [
+        { name: "LPG 30 минут", price: "1500 ₽", duration: 30 },
+        { name: "LPG 40 минут", price: "1900 ₽", duration: 40 },
+        { name: "LPG 60 минут", price: "2750 ₽", duration: 60 },
+        { name: "Ручной расслабляющий 1 час", price: "3300 ₽", duration: 60 },
+        { name: "Ручной расслабляющий 1,5 часа", price: "4400 ₽", duration: 90 }
+      ]
+    },
+    {
       category: "Чистка лица",
       items: [
         { name: "УЗ чистка", price: "1800 ₽", duration: 60 },
