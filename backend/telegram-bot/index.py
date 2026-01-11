@@ -30,8 +30,9 @@ def send_message(chat_id: int, text: str, keyboard: dict = None):
     if keyboard:
         payload['reply_markup'] = keyboard
     resp = requests.post(url, json=payload)
-    print(f"[SEND] {resp.status_code}")
-    return resp.json()
+    result = resp.json()
+    print(f"[SEND] {resp.status_code} - {result}")
+    return result
 
 def edit_message(chat_id: int, message_id: int, text: str, keyboard: dict = None):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/editMessageText"
@@ -39,7 +40,9 @@ def edit_message(chat_id: int, message_id: int, text: str, keyboard: dict = None
     if keyboard:
         payload['reply_markup'] = keyboard
     resp = requests.post(url, json=payload)
-    return resp.json()
+    result = resp.json()
+    print(f"[EDIT] {resp.status_code} - {result}")
+    return result
 
 def answer_callback(callback_id: str, text: str = ""):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/answerCallbackQuery"
@@ -100,10 +103,12 @@ def register_master_if_whitelisted(telegram_id: int, username: str) -> bool:
 
 def get_user_info(telegram_id: int, username: str = '') -> dict:
     """Определяет тип пользователя: мастер или клиент"""
+    print(f"[GET_USER_INFO] telegram_id={telegram_id}, username={username}")
     try:
         # Если есть username, пробуем автоматически зарегистрировать как мастера
         if username:
-            register_master_if_whitelisted(telegram_id, username)
+            registered = register_master_if_whitelisted(telegram_id, username)
+            print(f"[GET_USER_INFO] Master registration attempt: {registered}")
         
         conn = get_db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -199,7 +204,9 @@ def build_calendar(year: int, month: int, service_id: int = None) -> dict:
 
 def show_main_menu(chat_id: int, telegram_id: int, username: str = ''):
     """Главное меню в зависимости от типа пользователя"""
+    print(f"[MENU] chat_id={chat_id}, telegram_id={telegram_id}, username={username}")
     user = get_user_info(telegram_id, username)
+    print(f"[MENU] user type: {user['type']}")
     
     if user['type'] == 'master':
         text = f"👨‍💼 <b>Добро пожаловать, {user['name']}!</b>\n\nВы вошли как мастер."
@@ -523,7 +530,8 @@ def handle_callback_query(callback_query: dict):
         return
     
     if data == 'start':
-        show_main_menu(chat_id, user_id)
+        username = callback_query['from'].get('username', '')
+        show_main_menu(chat_id, user_id, username)
     
     elif data == 'client_book':
         show_masters(chat_id, message_id)
@@ -542,7 +550,8 @@ def handle_callback_query(callback_query: dict):
             show_master_all_bookings(chat_id, message_id, user['id'])
     
     elif data == 'master_block':
-        edit_message(chat_id, message_id, "⚠️ Функция блокировки времени в разработке")
+        keyboard = {'inline_keyboard': [[{'text': '« Назад', 'callback_data': 'start'}]]}
+        edit_message(chat_id, message_id, "⚠️ Функция блокировки времени в разработке", keyboard)
     
     elif data == 'back_to_masters':
         show_masters(chat_id, message_id)
