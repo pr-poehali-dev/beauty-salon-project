@@ -138,10 +138,9 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
             <p className="text-accent text-sm tracking-widest mb-4">НАШИ УСЛУГИ</p>
             <h2 className="text-5xl font-light">Спектр возможностей</h2>
           </div>
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-3 gap-8">
             {[
               { icon: "Sparkles", title: "Ногтевой сервис", desc: "Маникюр, покрытие, наращивание", target: "ногтевой-сервис" },
-              { icon: "Waves", title: "Шугаринг", desc: "Все зоны депиляции", target: "шугаринг" },
               { icon: "HandHeart", title: "Массаж", desc: "LPG, ручной, аппаратный", target: "массаж" },
               { icon: "Heart", title: "Уход за лицом", desc: "Чистки, пилинги, уходовые процедуры", target: "лицо" }
             ].map((service, idx) => (
@@ -195,29 +194,6 @@ const ServicesSection = ({ scrollToSection }: ServicesSectionProps) => {
                   </CardContent>
                 </Card>
               ))}
-            </div>
-          </div>
-
-          <div className="mb-16" id="шугаринг">
-            <h3 className="text-4xl font-bold text-center mb-8 pb-4 border-b-2 border-accent/30 max-w-4xl mx-auto text-white">
-              Виктория — Шугаринг
-            </h3>
-            <div className="max-w-4xl mx-auto">
-              <Card className="border border-gray-700 shadow-md bg-zinc-900">
-                <CardContent className="p-8">
-                  <div className="grid md:grid-cols-2 gap-x-12 gap-y-4">
-                    {victoriaServices[4].items.map((item, itemIdx) => (
-                      <div key={itemIdx} className="flex justify-between items-start gap-4">
-                        <div>
-                          <span className="text-white block">{item.name}</span>
-                          <span className="text-gray-400 text-sm">{item.duration} мин</span>
-                        </div>
-                        <span className="text-accent font-medium whitespace-nowrap">{item.price}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
 
