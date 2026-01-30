@@ -5,6 +5,28 @@ const BookingSection = () => {
         <div className="text-center mb-12">
           <p className="text-accent text-sm tracking-widest mb-4">ОНЛАЙН ЗАПИСЬ</p>
           <h2 className="text-5xl font-light mb-4 text-white">Записаться на прием</h2>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
+            <a 
+              href="https://mst.link/vasileva_viktoriya52" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all font-medium border border-white/20"
+            >
+              <span className="text-xl">💅</span>
+              Виктория
+            </a>
+            <a 
+              href="https://mst.link/popova_alena18" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all font-medium border border-white/20"
+            >
+              <span className="text-xl">💅</span>
+              Алена
+            </a>
+          </div>
+
           <p className="text-white mb-6">Запишитесь онлайн через Telegram бот — выбирайте мастера, услугу и удобное время</p>
           <a 
             href="https://t.me/promisslab_bot" 
